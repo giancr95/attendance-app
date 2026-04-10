@@ -1,7 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// LaCasaDelPlastico — Attendance & HR
+// Pre-seeded with the 10 ZKTeco MB10-VL device users.
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +8,180 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Connection URL lives in prisma.config.ts (Prisma 7 requirement).
+  // Runtime queries use the PrismaPg adapter — see src/lib/prisma.ts.
+}
+
+// ───────────────────────────── enums ─────────────────────────────
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum Department {
+  PRODUCCION
+  ADMINISTRACION
+}
+
+enum PunchKind {
+  CHECK_IN
+  CHECK_OUT
+  BREAK_OUT
+  BREAK_IN
+  OT_IN
+  OT_OUT
+  OTHER
+}
+
+enum PermitStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum PermitType {
+  MEDICAL
+  EARLY_LEAVE
+  LATE_ARRIVAL
+  FAMILY
+  PERSONAL
+  OTHER
+}
+
+enum VacationType {
+  ANUAL
+  PERSONAL
+  SICK
+}
+
+enum VacationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ───────────────────────────── models ─────────────────────────────
+
+model User {
+  id              String      @id @default(cuid())
+
+  // ZKTeco device link (nullable so we can also create web-only users later)
+  deviceUserId    Int?        @unique // ZKTeco user_id (the on-device PIN)
+  deviceUid       Int?        @unique // ZKTeco internal uid
+
+  // Identity
+  name            String
+  email           String?     @unique
+  emailVerified   DateTime?
+
+  // Auth
+  passwordHash    String?
+
+  // Profile
+  role            Role        @default(EMPLOYEE)
+  status          UserStatus  @default(INACTIVE)
+  department      Department  @default(PRODUCCION)
+
+  // Biometric snapshot (from last device sync)
+  fingerprints    Int         @default(0)
+  hasFace         Boolean     @default(false)
+  hasDataIssue    Boolean     @default(false) // e.g. corrupted name on device
+
+  // Relations
+  punches            Punch[]
+  permits            Permit[]   @relation("PermitOwner")
+  permitsReviewed    Permit[]   @relation("PermitReviewer")
+  vacations          Vacation[] @relation("VacationOwner")
+  vacationsReviewed  Vacation[] @relation("VacationReviewer")
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([deviceUserId])
+  @@index([email])
+}
+
+model Device {
+  id           String   @id @default(cuid())
+  name         String
+  serial       String   @unique
+  ipAddress    String
+  port         Int      @default(4370)
+  commPassword Int      @default(0)
+  firmware     String?
+  platform     String?
+  mac          String?
+  location     String?
+  isActive     Boolean  @default(true)
+  lastSyncAt   DateTime?
+
+  punches      Punch[]
+
+  createdAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Punch {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  device      Device    @relation(fields: [deviceId], references: [id])
+  deviceId    String
+  timestamp   DateTime
+  kind        PunchKind @default(OTHER)
+  rawStatus   Int
+  rawPunch    Int       @default(0)
+  syncedAt    DateTime  @default(now())
+
+  @@unique([deviceId, userId, timestamp])
+  @@index([userId, timestamp])
+  @@index([deviceId, timestamp])
+}
+
+model Permit {
+  id          String       @id @default(cuid())
+  user        User         @relation("PermitOwner", fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  type        PermitType
+  date        DateTime
+  duration    String
+  reason      String
+  status      PermitStatus @default(PENDING)
+  reviewer    User?        @relation("PermitReviewer", fields: [reviewerId], references: [id])
+  reviewerId  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([date])
+}
+
+model Vacation {
+  id          String         @id @default(cuid())
+  user        User           @relation("VacationOwner", fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  startDate   DateTime
+  endDate     DateTime
+  days        Int
+  type        VacationType
+  status      VacationStatus @default(PENDING)
+  notes       String?
+  reviewer    User?          @relation("VacationReviewer", fields: [reviewerId], references: [id])
+  reviewerId  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([startDate, endDate])
 }
