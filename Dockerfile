@@ -43,15 +43,17 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static      ./.next/static
 # Prisma CLI + schema + migrations — needed at startup for `migrate deploy`.
 # We copy the already-installed prisma package from the deps stage rather than
 # re-installing, to keep the image small and deterministic.
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/prisma         ./node_modules/prisma
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/@prisma        ./node_modules/@prisma
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/effect         ./node_modules/effect
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/tsx            ./node_modules/tsx
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/esbuild        ./node_modules/esbuild
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/@esbuild       ./node_modules/@esbuild
-COPY --from=builder --chown=nextjs:nodejs /app/prisma                      ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts            ./prisma.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv         ./node_modules/dotenv
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/prisma             ./node_modules/prisma
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/@prisma            ./node_modules/@prisma
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/effect             ./node_modules/effect
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/fast-check         ./node_modules/fast-check
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/@standard-schema   ./node_modules/@standard-schema
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/tsx                ./node_modules/tsx
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/esbuild            ./node_modules/esbuild
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules/@esbuild           ./node_modules/@esbuild
+COPY --from=builder --chown=nextjs:nodejs /app/prisma                          ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts                ./prisma.config.ts
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/dotenv             ./node_modules/dotenv
 
 # Entrypoint
 COPY --chown=nextjs:nodejs docker-entrypoint.sh /app/docker-entrypoint.sh
