@@ -24,6 +24,7 @@ export const metadata = {
 async function loadDashboard() {
   const today = startOfTodayCR();
 
+  // Dashboard counts only EMPLOYEE-role users (admins don't punch the clock).
   const [
     activeEmployees,
     inactiveEmployees,
@@ -32,12 +33,15 @@ async function loadDashboard() {
     pendingVacations,
     latestPunches,
   ] = await Promise.all([
-    prisma.user.count({ where: { status: "ACTIVE" } }),
-    prisma.user.count({ where: { status: "INACTIVE" } }),
-    prisma.punch.count({ where: { timestamp: { gte: today } } }),
+    prisma.user.count({ where: { status: "ACTIVE", role: "EMPLOYEE" } }),
+    prisma.user.count({ where: { status: "INACTIVE", role: "EMPLOYEE" } }),
+    prisma.punch.count({
+      where: { timestamp: { gte: today }, user: { role: "EMPLOYEE" } },
+    }),
     prisma.permit.count({ where: { status: "PENDING" } }),
     prisma.vacation.count({ where: { status: "PENDING" } }),
     prisma.punch.findMany({
+      where: { user: { role: "EMPLOYEE" } },
       orderBy: { timestamp: "desc" },
       take: 8,
       include: { user: { select: { name: true, department: true } } },

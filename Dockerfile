@@ -7,7 +7,10 @@ ARG NODE_VERSION=22-alpine
 
 # ─────────────────────────── base ───────────────────────────
 FROM node:${NODE_VERSION} AS base
-RUN apk add --no-cache libc6-compat openssl
+# python3 + pyzk are needed at runtime by scripts/zk-bridge.py — the Node
+# zklib forks all fail on this device's firmware, so we shell out to Python.
+RUN apk add --no-cache libc6-compat openssl python3 py3-pip \
+ && pip3 install --break-system-packages --no-cache-dir pyzk
 WORKDIR /app
 
 # ─────────────────────────── deps ───────────────────────────
@@ -44,6 +47,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static      ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma                      ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts            ./prisma.config.ts
 RUN npm install --no-save prisma@latest @prisma/config dotenv tsx esbuild 2>/dev/null
+
+# Python bridge for ZKTeco device communication. The Next.js sync server
+# action spawns this script at runtime via child_process.
+COPY --from=builder --chown=nextjs:nodejs /app/scripts                     ./scripts
 
 # Entrypoint
 COPY --chown=nextjs:nodejs docker-entrypoint.sh /app/docker-entrypoint.sh

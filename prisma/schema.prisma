@@ -77,7 +77,13 @@ model User {
   deviceUid       Int?        @unique // ZKTeco internal uid
 
   // Identity
+  // `name` is the canonical, human-friendly name shown everywhere in the UI.
+  // `deviceName` is the raw name pulled from the ZKTeco device — kept around
+  // only for the raw-data view because the device frequently corrupts names
+  // (truncated, control bytes, etc.). When `name` was set manually by an
+  // admin we never overwrite it on sync.
   name            String
+  deviceName      String?
   email           String?     @unique
   emailVerified   DateTime?
 
@@ -88,6 +94,16 @@ model User {
   role            Role        @default(EMPLOYEE)
   status          UserStatus  @default(INACTIVE)
   department      Department  @default(PRODUCCION)
+
+  // Compensation. Either field can be set; the payroll page picks the one
+  // that's filled in (hourlyRate has priority if both are present, with
+  // monthlySalary acting as a hard floor for "salaried" employees).
+  hourlyRate      Decimal?    @db.Decimal(10, 2)
+  monthlySalary   Decimal?    @db.Decimal(10, 2)
+
+  // Employment start date — used to compute vacation accrual (1 day per
+  // full month worked, per CR convention).
+  hireDate        DateTime?   @db.Date
 
   // Biometric snapshot (from last device sync)
   fingerprints    Int         @default(0)

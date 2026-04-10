@@ -1,12 +1,19 @@
+// Today's marcajes view.
+//
+// Uses the *ordinal* punch interpretation (1st = entrance, 2nd = lunch out,
+// 3rd = lunch in, last = exit) — never trusts the device's CHECK_IN /
+// CHECK_OUT labels because employees don't bother pressing the right key.
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatTime } from "@/lib/format";
+import {
+  formatDate,
+  formatTime,
+  formatDateTime,
+  startOfTodayCR,
+} from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Table,
@@ -16,104 +23,201 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DEPARTMENT_LABEL, PUNCH_KIND_LABEL } from "@/lib/labels";
+import { KpiCard } from "@/components/kpi-card";
+import { PageHeader } from "@/components/page-header";
+import { SyncPunchesButton } from "@/components/sync-punches-button";
+import { DEPARTMENT_LABEL } from "@/lib/labels";
+import { summarizeByDay } from "@/lib/punch-interpretation";
 
 export const metadata = {
   title: "Marcajes · LCDP",
 };
 
-const PAGE_SIZE = 50;
+const DEVICE_SERIAL = "UDP3243700044";
 
-export default async function PunchesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string }>;
-}) {
-  const sp = await searchParams;
-  const page = Math.max(1, Number(sp.page) || 1);
+export default async function PunchesPage() {
+  const today = startOfTodayCR();
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
-  const [total, punches] = await Promise.all([
-    prisma.punch.count(),
+  const [device, allUsers, todayPunches] = await Promise.all([
+    prisma.device.findUnique({ where: { serial: DEVICE_SERIAL } }),
+    // Admins don't punch a clock — exclude them from attendance views.
+    prisma.user.findMany({
+      where: { status: "ACTIVE", role: "EMPLOYEE" },
+      select: { id: true, name: true, department: true },
+      orderBy: { name: "asc" },
+    }),
     prisma.punch.findMany({
-      orderBy: { timestamp: "desc" },
-      take: PAGE_SIZE,
-      skip: (page - 1) * PAGE_SIZE,
-      include: {
-        user: { select: { name: true, department: true } },
-        device: { select: { name: true } },
+      where: {
+        timestamp: { gte: today, lt: tomorrow },
+        user: { role: "EMPLOYEE" },
       },
+      orderBy: { timestamp: "asc" },
+      select: { id: true, userId: true, timestamp: true },
     }),
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const punchesByUser = new Map<string, typeof todayPunches>();
+  for (const p of todayPunches) {
+    if (!punchesByUser.has(p.userId)) punchesByUser.set(p.userId, []);
+    punchesByUser.get(p.userId)!.push(p);
+  }
+
+  type Row = {
+    userId: string;
+    name: string;
+    department: "PRODUCCION" | "ADMINISTRACION";
+    entrance?: Date;
+    exit?: Date;
+    workedHours: number;
+    isLate: boolean;
+    punchCount: number;
+    present: boolean;
+  };
+
+  const rows: Row[] = allUsers.map((u) => {
+    const summaries = summarizeByDay(punchesByUser.get(u.id) ?? []);
+    const today = summaries[0];
+    return {
+      userId: u.id,
+      name: u.name,
+      department: u.department,
+      entrance: today?.entrance,
+      exit: today?.exit,
+      workedHours: today?.workedHours ?? 0,
+      isLate: today?.isLate ?? false,
+      punchCount: today?.punchCount ?? 0,
+      present: !!today?.entrance,
+    };
+  });
+
+  // KPIs
+  const totalUsers = allUsers.length;
+  const presentToday = rows.filter((r) => r.present).length;
+  const presentPct =
+    totalUsers > 0 ? Math.round((presentToday / totalUsers) * 100) : 0;
+  const lateCount = rows.filter((r) => r.isLate).length;
+  const absentCount = totalUsers - presentToday;
+
+  const subtitle = (
+    <>
+      MB10-VL · 192.168.1.202 ·{" "}
+      {device?.lastSyncAt ? (
+        <>
+          última sincronización{" "}
+          <span className="font-medium text-foreground">
+            {formatDateTime(device.lastSyncAt)}
+          </span>
+        </>
+      ) : (
+        "sin sincronizar"
+      )}
+    </>
+  );
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Marcajes</h1>
-        <p className="text-sm text-muted-foreground">
-          Bitácora de entradas, salidas y descansos del dispositivo.
-        </p>
+      <PageHeader
+        title="Marcajes"
+        subtitle={subtitle}
+        actions={<SyncPunchesButton />}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Total empleados" value={totalUsers} />
+        <KpiCard
+          label="Presentes hoy"
+          value={presentToday}
+          hint={`${presentPct}% asistencia`}
+          hintTone="success"
+        />
+        <KpiCard
+          label="Llegadas tarde"
+          value={lateCount}
+          hint={lateCount > 0 ? "después de 08:00" : undefined}
+          hintTone="danger"
+          valueTone={lateCount > 0 ? "danger" : "default"}
+        />
+        <KpiCard
+          label="Ausentes"
+          value={absentCount}
+          hint={absentCount > 0 ? "sin marcaje hoy" : undefined}
+          hintTone="warning"
+        />
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Historial</CardTitle>
-          <CardDescription>
-            {total} registros · página {page} de {totalPages}
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-0">
-          {punches.length === 0 ? (
+          {rows.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              No hay marcajes registrados todavía.
+              No hay empleados activos.
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Hora</TableHead>
                   <TableHead>Empleado</TableHead>
+                  <TableHead className="hidden md:table-cell">Depto.</TableHead>
+                  <TableHead>Entrada</TableHead>
+                  <TableHead>Salida</TableHead>
+                  <TableHead>Horas</TableHead>
                   <TableHead className="hidden md:table-cell">
-                    Depto.
+                    Marcajes
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    Dispositivo
-                  </TableHead>
-                  <TableHead className="text-right">Tipo</TableHead>
+                  <TableHead className="text-right">Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {punches.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="text-sm">
-                      {formatDate(p.timestamp)}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {formatTime(p.timestamp)}
-                    </TableCell>
-                    <TableCell className="text-sm font-medium">
-                      {p.user.name}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {DEPARTMENT_LABEL[p.user.department]}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {p.device.name}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="secondary" className="text-xs">
-                        {PUNCH_KIND_LABEL[p.kind]}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {rows.map((r) => {
+                  const hours = !r.entrance
+                    ? "—"
+                    : r.exit
+                    ? `${r.workedHours.toFixed(1)}h`
+                    : "trabajando";
+                  const status = !r.entrance ? (
+                    <Badge variant="destructive">Ausente</Badge>
+                  ) : r.isLate ? (
+                    <Badge className="bg-amber-500 text-white">Tarde</Badge>
+                  ) : (
+                    <Badge className="bg-foreground text-background">
+                      Presente
+                    </Badge>
+                  );
+                  return (
+                    <TableRow key={r.userId}>
+                      <TableCell className="text-sm font-medium">
+                        {r.name}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                        {DEPARTMENT_LABEL[r.department]}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {r.entrance ? formatTime(r.entrance) : "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {r.exit ? formatTime(r.exit) : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {hours}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                        {r.punchCount > 0 ? r.punchCount : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">{status}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
+
+      <p className="text-xs text-muted-foreground">
+        Hoy: {formatDate(today)} · Las horas se calculan tomando la 1.ª marca
+        como entrada, la 2.ª como salida a almuerzo, la 3.ª como regreso y la
+        última como salida.
+      </p>
     </div>
   );
 }
