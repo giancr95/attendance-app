@@ -44,6 +44,9 @@ export function NewVacationDialog({ employees }: Props) {
 
   const [userId, setUserId] = useState<string>(employees[0]?.id ?? "");
   const [type, setType] = useState<VacationType>("ANUAL");
+  // Base UI's Select passes `string | null` to onValueChange; coerce to "".
+  const pickString = (setter: (v: string) => void) => (v: string | null) =>
+    setter(v ?? "");
   const [startDate, setStartDate] = useState<string>(today);
   const [endDate, setEndDate] = useState<string>(today);
   const [notes, setNotes] = useState<string>("");
@@ -98,7 +101,7 @@ export function NewVacationDialog({ employees }: Props) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="vac-employee">Empleado</Label>
-            <Select value={userId} onValueChange={setUserId}>
+            <Select value={userId} onValueChange={pickString(setUserId)}>
               <SelectTrigger id="vac-employee">
                 <SelectValue placeholder="Seleccionar empleado…" />
               </SelectTrigger>
@@ -116,7 +119,7 @@ export function NewVacationDialog({ employees }: Props) {
             <Label htmlFor="vac-type">Tipo</Label>
             <Select
               value={type}
-              onValueChange={(v) => setType(v as VacationType)}
+              onValueChange={(v) => setType((v ?? "ANUAL") as VacationType)}
             >
               <SelectTrigger id="vac-type">
                 <SelectValue />

@@ -208,7 +208,9 @@ export function EmployeeEditDialog({
               <Label htmlFor="emp-dept">Departamento</Label>
               <Select
                 value={department}
-                onValueChange={(v) => setDepartment(v as Department)}
+                onValueChange={(v) =>
+                  setDepartment((v ?? "PRODUCCION") as Department)
+                }
               >
                 <SelectTrigger id="emp-dept">
                   <SelectValue />
@@ -225,7 +227,10 @@ export function EmployeeEditDialog({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="emp-role">Rol</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+              <Select
+                value={role}
+                onValueChange={(v) => setRole((v ?? "EMPLOYEE") as Role)}
+              >
                 <SelectTrigger id="emp-role">
                   <SelectValue />
                 </SelectTrigger>
@@ -241,7 +246,9 @@ export function EmployeeEditDialog({
               <Label htmlFor="emp-status">Estado</Label>
               <Select
                 value={status}
-                onValueChange={(v) => setStatus(v as UserStatus)}
+                onValueChange={(v) =>
+                  setStatus((v ?? "ACTIVE") as UserStatus)
+                }
               >
                 <SelectTrigger id="emp-status">
                   <SelectValue />

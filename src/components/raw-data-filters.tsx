@@ -27,9 +27,9 @@ export function RawDataFilters({ start, end, userId, employees }: Props) {
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
 
-  function update(field: string, value: string) {
+  function update(field: string, value: string | null) {
     const next = new URLSearchParams(params.toString());
-    if (value === "" || value === ALL) {
+    if (!value || value === ALL) {
       next.delete(field);
     } else {
       next.set(field, value);

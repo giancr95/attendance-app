@@ -49,6 +49,9 @@ export function NewPermitDialog({ employees }: Props) {
 
   const [userId, setUserId] = useState<string>(employees[0]?.id ?? "");
   const [type, setType] = useState<PermitType>("MEDICAL");
+  // Base UI's Select passes `string | null` to onValueChange; coerce to "".
+  const pickString = (setter: (v: string) => void) => (v: string | null) =>
+    setter(v ?? "");
   const [date, setDate] = useState<string>(
     () => new Date().toISOString().slice(0, 10)
   );
@@ -105,7 +108,7 @@ export function NewPermitDialog({ employees }: Props) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="permit-employee">Empleado</Label>
-            <Select value={userId} onValueChange={setUserId}>
+            <Select value={userId} onValueChange={pickString(setUserId)}>
               <SelectTrigger id="permit-employee">
                 <SelectValue placeholder="Seleccionar empleado…" />
               </SelectTrigger>
@@ -123,7 +126,7 @@ export function NewPermitDialog({ employees }: Props) {
             <Label htmlFor="permit-type">Tipo</Label>
             <Select
               value={type}
-              onValueChange={(v) => setType(v as PermitType)}
+              onValueChange={(v) => setType((v ?? "MEDICAL") as PermitType)}
             >
               <SelectTrigger id="permit-type">
                 <SelectValue />
