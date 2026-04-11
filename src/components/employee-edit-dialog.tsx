@@ -30,6 +30,7 @@ import {
   ROLE_LABEL,
   USER_STATUS_LABEL,
 } from "@/lib/labels";
+import { formatLateCutoff, parseLateCutoff } from "@/lib/rules";
 import type {
   Department,
   Role,
@@ -48,6 +49,7 @@ type Props = {
     hourlyRate: number | null;
     monthlySalary: number | null;
     hireDate: Date | null;
+    lateCutoffMin: number | null;
     department: Department;
     role: Role;
     status: UserStatus;
@@ -79,6 +81,9 @@ export function EmployeeEditDialog({
   const [hireDate, setHireDate] = useState<string>(
     user.hireDate ? user.hireDate.toISOString().slice(0, 10) : ""
   );
+  const [lateCutoff, setLateCutoff] = useState<string>(
+    formatLateCutoff(user.lateCutoffMin)
+  );
   const [department, setDepartment] = useState<Department>(user.department);
   const [role, setRole] = useState<Role>(user.role);
   const [status, setStatus] = useState<UserStatus>(user.status);
@@ -88,6 +93,18 @@ export function EmployeeEditDialog({
     e.preventDefault();
     start(async () => {
       const id = toast.loading("Guardando cambios…");
+      // Validate the cutoff input: empty → use global default, otherwise
+      // must parse as HH:MM. Reject anything in between.
+      let lateCutoffMin: number | null = null;
+      if (lateCutoff.trim() !== "") {
+        const parsed = parseLateCutoff(lateCutoff);
+        if (parsed == null) {
+          toast.error("Hora de tardanza inválida (use HH:MM)", { id: "" });
+          return;
+        }
+        lateCutoffMin = parsed;
+      }
+
       const result = await updateUserProfile({
         userId: user.id,
         name,
@@ -96,6 +113,7 @@ export function EmployeeEditDialog({
         monthlySalary:
           monthlySalary.trim() === "" ? null : Number(monthlySalary),
         hireDate: hireDate ? new Date(`${hireDate}T00:00:00-06:00`) : null,
+        lateCutoffMin,
         department,
         role,
         status,
@@ -195,17 +213,32 @@ export function EmployeeEditDialog({
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="emp-hire">Fecha de ingreso</Label>
-            <Input
-              id="emp-hire"
-              type="date"
-              value={hireDate}
-              onChange={(e) => setHireDate(e.target.value)}
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Cada mes completo desde esta fecha acumula 1 día de vacaciones.
-            </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="emp-hire">Fecha de ingreso</Label>
+              <Input
+                id="emp-hire"
+                type="date"
+                value={hireDate}
+                onChange={(e) => setHireDate(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                1 día de vacaciones por mes completo desde esta fecha.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="emp-cutoff">Tardanza después de</Label>
+              <Input
+                id="emp-cutoff"
+                type="time"
+                value={lateCutoff}
+                onChange={(e) => setLateCutoff(e.target.value)}
+                placeholder="08:00"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Dejar vacío para usar el global (08:00).
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">

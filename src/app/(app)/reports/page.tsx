@@ -67,7 +67,12 @@ export default async function ReportsPage({
     prisma.user.count({ where: { status: "ACTIVE", role: "EMPLOYEE" } }),
     prisma.user.findMany({
       where: { status: "ACTIVE", role: "EMPLOYEE" },
-      select: { id: true, name: true, department: true },
+      select: {
+        id: true,
+        name: true,
+        department: true,
+        lateCutoffMin: true,
+      },
     }),
     prisma.punch.findMany({
       where: {
@@ -108,7 +113,10 @@ export default async function ReportsPage({
   };
 
   const rows: Row[] = allUsers.map((u) => {
-    const summaries = summarizeByDay(punchesByUser.get(u.id) ?? []);
+    const summaries = summarizeByDay(
+      punchesByUser.get(u.id) ?? [],
+      u.lateCutoffMin ?? null
+    );
     const daysPresent = summaries.filter((s) => !!s.entrance).length;
     const totalHours = summaries.reduce((s, d) => s + d.workedHours, 0);
     const lateCount = summaries.filter((s) => s.isLate).length;

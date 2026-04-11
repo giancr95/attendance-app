@@ -45,7 +45,12 @@ export default async function PunchesPage() {
     // Admins don't punch a clock — exclude them from attendance views.
     prisma.user.findMany({
       where: { status: "ACTIVE", role: "EMPLOYEE" },
-      select: { id: true, name: true, department: true },
+      select: {
+        id: true,
+        name: true,
+        department: true,
+        lateCutoffMin: true,
+      },
       orderBy: { name: "asc" },
     }),
     prisma.punch.findMany({
@@ -77,7 +82,10 @@ export default async function PunchesPage() {
   };
 
   const rows: Row[] = allUsers.map((u) => {
-    const summaries = summarizeByDay(punchesByUser.get(u.id) ?? []);
+    const summaries = summarizeByDay(
+      punchesByUser.get(u.id) ?? [],
+      u.lateCutoffMin ?? null
+    );
     const today = summaries[0];
     return {
       userId: u.id,

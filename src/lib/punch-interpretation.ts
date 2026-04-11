@@ -56,8 +56,15 @@ export function startOfCrDay(dayKey: string): Date {
 /**
  * Group raw punches by CR-local day and run the ordinal interpretation.
  * Punches must be sorted ascending by timestamp before calling.
+ *
+ * `lateCutoffMinCr` lets callers override the global 08:00 threshold on a
+ * per-employee basis (minutes since midnight, CR time). Pass `null`/undefined
+ * to use the default from rules.ts.
  */
-export function summarizeByDay(punches: RawPunch[]): DailySummary[] {
+export function summarizeByDay(
+  punches: RawPunch[],
+  lateCutoffMinCr: number | null = null
+): DailySummary[] {
   const sorted = [...punches].sort(
     (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
   );
@@ -71,13 +78,17 @@ export function summarizeByDay(punches: RawPunch[]): DailySummary[] {
 
   const out: DailySummary[] = [];
   for (const [dayKey, dayPunches] of byDay) {
-    out.push(interpretDay(dayKey, dayPunches));
+    out.push(interpretDay(dayKey, dayPunches, lateCutoffMinCr));
   }
   out.sort((a, b) => a.dayKey.localeCompare(b.dayKey));
   return out;
 }
 
-function interpretDay(dayKey: string, dayPunches: RawPunch[]): DailySummary {
+function interpretDay(
+  dayKey: string,
+  dayPunches: RawPunch[],
+  lateCutoffMinCr: number | null = null
+): DailySummary {
   const sorted = dayPunches.sort(
     (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
   );
@@ -122,6 +133,6 @@ function interpretDay(dayKey: string, dayPunches: RawPunch[]): DailySummary {
     exit,
     punchCount: sorted.length,
     workedHours,
-    isLate: !!entrance && isLateEntrance(entrance),
+    isLate: !!entrance && isLateEntrance(entrance, lateCutoffMinCr),
   };
 }

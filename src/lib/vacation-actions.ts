@@ -42,6 +42,8 @@ const CreateVacationSchema = z
     endDate: z.coerce.date(),
     type: z.nativeEnum(VacationType),
     notes: z.string().max(500).optional(),
+    // "Con goce de salario" — defaults to true.
+    paid: z.boolean().optional(),
   })
   .refine((d) => d.endDate >= d.startDate, {
     message: "La fecha de fin debe ser igual o posterior a la de inicio",
@@ -75,11 +77,13 @@ export async function createVacation(
         days,
         type: parsed.data.type,
         notes: parsed.data.notes ?? null,
+        paid: parsed.data.paid ?? true,
         status: VacationStatus.PENDING,
       },
     });
 
     revalidatePath("/vacations");
+    revalidatePath("/payroll");
     revalidatePath("/");
     return { ok: true };
   } catch (e) {

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -44,6 +45,7 @@ export function NewVacationDialog({ employees }: Props) {
 
   const [userId, setUserId] = useState<string>(employees[0]?.id ?? "");
   const [type, setType] = useState<VacationType>("ANUAL");
+  const [paid, setPaid] = useState<boolean>(true);
   // Base UI's Select passes `string | null` to onValueChange; coerce to "".
   const pickString = (setter: (v: string) => void) => (v: string | null) =>
     setter(v ?? "");
@@ -57,6 +59,7 @@ export function NewVacationDialog({ employees }: Props) {
     setStartDate(today());
     setEndDate(today());
     setNotes("");
+    setPaid(true);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -69,6 +72,7 @@ export function NewVacationDialog({ employees }: Props) {
         startDate,
         endDate,
         notes: notes || undefined,
+        paid,
       });
       if (result.ok) {
         toast.success("Solicitud creada", { id });
@@ -157,6 +161,14 @@ export function NewVacationDialog({ employees }: Props) {
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={paid}
+              onCheckedChange={(v) => setPaid(v === true)}
+            />
+            <span>Con goce de salario</span>
+          </label>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="vac-notes">Notas (opcional)</Label>

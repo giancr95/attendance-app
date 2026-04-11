@@ -35,6 +35,7 @@ type EditProps = {
   hourlyRate: number | null;
   monthlySalary: number | null;
   hireDate: Date | null;
+  lateCutoffMin: number | null;
   department: Department;
   role: Role;
   status: UserStatus;

@@ -148,6 +148,7 @@ export type UpdateProfileInput = {
   hourlyRate?: number | null;
   monthlySalary?: number | null;
   hireDate?: Date | null;
+  lateCutoffMin?: number | null;
   department?: Department;
   role?: Role;
   status?: UserStatus;
@@ -180,6 +181,8 @@ export async function updateUserProfile(
     if (input.hourlyRate !== undefined) data.hourlyRate = input.hourlyRate;
     if (input.monthlySalary !== undefined) data.monthlySalary = input.monthlySalary;
     if (input.hireDate !== undefined) data.hireDate = input.hireDate;
+    if (input.lateCutoffMin !== undefined)
+      data.lateCutoffMin = input.lateCutoffMin;
     if (input.department !== undefined) data.department = input.department;
     if (input.role !== undefined) data.role = input.role;
     if (input.status !== undefined) data.status = input.status;

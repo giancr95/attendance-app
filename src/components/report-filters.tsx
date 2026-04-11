@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,10 @@ type Props = {
 
 export function ReportFilters({ start, end }: Props) {
   const router = useRouter();
+  // Use the CURRENT pathname so this component works on any page that
+  // uses the same `?start=…&end=…` convention (reports, payroll, etc.).
+  // Previously we hardcoded `/reports` which bounced payroll users away.
+  const pathname = usePathname();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
 
@@ -21,7 +25,7 @@ export function ReportFilters({ start, end }: Props) {
     const next = new URLSearchParams(params.toString());
     next.set(field, value);
     startTransition(() => {
-      router.replace(`/reports?${next.toString()}`);
+      router.replace(`${pathname}?${next.toString()}`);
     });
   }
 
@@ -32,7 +36,7 @@ export function ReportFilters({ start, end }: Props) {
     next.set("start", startD.toISOString().slice(0, 10));
     next.set("end", endD.toISOString().slice(0, 10));
     startTransition(() => {
-      router.replace(`/reports?${next.toString()}`);
+      router.replace(`${pathname}?${next.toString()}`);
     });
   }
 
@@ -70,6 +74,14 @@ export function ReportFilters({ start, end }: Props) {
           onClick={() => preset(7)}
         >
           7 días
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          onClick={() => preset(15)}
+        >
+          15 días
         </Button>
         <Button
           variant="outline"

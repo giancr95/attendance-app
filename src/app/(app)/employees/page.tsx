@@ -241,6 +241,7 @@ export default async function EmployeesPage() {
                               ? Number(u.monthlySalary)
                               : null,
                           hireDate: u.hireDate,
+                          lateCutoffMin: u.lateCutoffMin,
                           department: u.department,
                           role: u.role,
                           status: u.status,

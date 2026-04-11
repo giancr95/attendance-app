@@ -110,6 +110,11 @@ model User {
   // full month worked, per CR convention).
   hireDate        DateTime?   @db.Date
 
+  // Per-employee late-arrival cutoff. Stored as "minutes since midnight CR"
+  // so we don't have to deal with timezones in a TIME column. Null means
+  // use the global default from rules.ts (08:00 CR == 480).
+  lateCutoffMin   Int?
+
   // Biometric snapshot (from last device sync)
   fingerprints    Int         @default(0)
   hasFace         Boolean     @default(false)
@@ -172,7 +177,9 @@ model Permit {
   userId      String
   type        PermitType
   date        DateTime
-  duration    String
+  duration    String       // free-text label, e.g. "2 horas", "Medio día"
+  hours       Decimal?     @db.Decimal(5, 2) // payable hours for this permit
+  paid        Boolean      @default(true)    // "con goce de salario"
   reason      String
   status      PermitStatus @default(PENDING)
   reviewer    User?        @relation("PermitReviewer", fields: [reviewerId], references: [id])
@@ -194,6 +201,8 @@ model Vacation {
   endDate     DateTime
   days        Int
   type        VacationType
+  // "con goce de salario" — false means this time off is unpaid.
+  paid        Boolean        @default(true)
   status      VacationStatus @default(PENDING)
   notes       String?
   reviewer    User?          @relation("VacationReviewer", fields: [reviewerId], references: [id])

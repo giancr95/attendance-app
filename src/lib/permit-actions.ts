@@ -43,6 +43,12 @@ const CreatePermitSchema = z.object({
   date: z.coerce.date(),
   duration: z.string().min(1, "Duración requerida").max(50),
   reason: z.string().min(3, "Motivo muy corto").max(500),
+  // Payable hours for this permit. Optional — when null, the permit shows
+  // up in the UI but doesn't contribute to payroll. Typical values: 1, 2,
+  // 4 (half day), 8 (full day).
+  hours: z.number().min(0).max(24).nullable().optional(),
+  // "Con goce de salario" — defaults to true.
+  paid: z.boolean().optional(),
 });
 
 export type CreatePermitInput = z.input<typeof CreatePermitSchema>;
@@ -71,11 +77,14 @@ export async function createPermit(
         date: parsed.data.date,
         duration: parsed.data.duration,
         reason: parsed.data.reason,
+        hours: parsed.data.hours ?? null,
+        paid: parsed.data.paid ?? true,
         status: PermitStatus.PENDING,
       },
     });
 
     revalidatePath("/permits");
+    revalidatePath("/payroll");
     revalidatePath("/");
     return { ok: true };
   } catch (e) {

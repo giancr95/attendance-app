@@ -32,13 +32,46 @@ function crToUtcMinutes(h: number, m: number) {
   return (h + 6) * 60 + m;
 }
 
-export function isLateEntrance(timestamp: Date): boolean {
-  const minutes = timestamp.getUTCHours() * 60 + timestamp.getUTCMinutes();
-  const cutoff = crToUtcMinutes(
-    ATTENDANCE_RULES.lateThresholdCr.hour,
-    ATTENDANCE_RULES.lateThresholdCr.minute
-  );
-  return minutes > cutoff;
+/**
+ * Is the given punch considered late?
+ *
+ * The cutoff is `cutoffMinCr` (minutes-since-midnight in CR time) when a
+ * per-employee override is set, otherwise the global default from
+ * ATTENDANCE_RULES.lateThresholdCr.
+ */
+export function isLateEntrance(
+  timestamp: Date,
+  cutoffMinCr: number | null | undefined = null
+): boolean {
+  const minutesUtc = timestamp.getUTCHours() * 60 + timestamp.getUTCMinutes();
+  const cutoffCrHour =
+    cutoffMinCr != null
+      ? Math.floor(cutoffMinCr / 60)
+      : ATTENDANCE_RULES.lateThresholdCr.hour;
+  const cutoffCrMin =
+    cutoffMinCr != null
+      ? cutoffMinCr % 60
+      : ATTENDANCE_RULES.lateThresholdCr.minute;
+  const cutoffUtc = crToUtcMinutes(cutoffCrHour, cutoffCrMin);
+  return minutesUtc > cutoffUtc;
+}
+
+/** "08:00" → 480 (minutes since midnight). Returns null if invalid. */
+export function parseLateCutoff(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  const h = Number.parseInt(m[1], 10);
+  const min = Number.parseInt(m[2], 10);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/** 480 → "08:00" */
+export function formatLateCutoff(minutes: number | null | undefined): string {
+  if (minutes == null) return "";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
 export function isWorkingDay(date: Date): boolean {

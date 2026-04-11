@@ -34,6 +34,7 @@ import { ReportFilters } from "@/components/report-filters";
 import { ExportButton } from "@/components/export-button";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
 import { summarizeByDay } from "@/lib/punch-interpretation";
+import { ATTENDANCE_RULES } from "@/lib/rules";
 import type { Department } from "@/generated/prisma/client";
 
 export const metadata = {
@@ -87,7 +88,7 @@ export default async function PayrollPage({
   const endStr = endDate.toISOString().slice(0, 10);
 
   // Admins don't earn hourly attendance pay — exclude them from payroll.
-  const [users, punches] = await Promise.all([
+  const [users, punches, permits, vacations] = await Promise.all([
     prisma.user.findMany({
       where: { status: "ACTIVE", role: "EMPLOYEE" },
       orderBy: { name: "asc" },
@@ -100,6 +101,28 @@ export default async function PayrollPage({
       orderBy: { timestamp: "asc" },
       select: { id: true, userId: true, timestamp: true },
     }),
+    // Approved + paid permits that overlap the period.
+    prisma.permit.findMany({
+      where: {
+        status: "APPROVED",
+        paid: true,
+        date: { gte: startDate, lt: endExclusive },
+        user: { role: "EMPLOYEE" },
+      },
+      select: { userId: true, hours: true },
+    }),
+    // Approved + paid vacations that overlap the period. We count any day
+    // of the vacation that falls inside [startDate, endExclusive).
+    prisma.vacation.findMany({
+      where: {
+        status: "APPROVED",
+        paid: true,
+        startDate: { lt: endExclusive },
+        endDate: { gte: startDate },
+        user: { role: "EMPLOYEE" },
+      },
+      select: { userId: true, startDate: true, endDate: true },
+    }),
   ]);
 
   // Group punches by user
@@ -109,6 +132,42 @@ export default async function PayrollPage({
     punchesByUser.get(p.userId)!.push(p);
   }
 
+  // Per-user accumulators for paid-leave hours. Permit hours are added
+  // directly; vacation days are converted to hours using the regular
+  // 8-hour workday (only days that fall inside the selected period).
+  const permitHoursByUser = new Map<string, number>();
+  for (const p of permits) {
+    if (p.hours == null) continue;
+    permitHoursByUser.set(
+      p.userId,
+      (permitHoursByUser.get(p.userId) ?? 0) + Number(p.hours)
+    );
+  }
+
+  const vacationHoursByUser = new Map<string, number>();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  for (const v of vacations) {
+    // Clip to the period window
+    const from = v.startDate > startDate ? v.startDate : startDate;
+    const to = v.endDate < endExclusive ? v.endDate : new Date(endExclusive.getTime() - DAY_MS);
+    if (to < from) continue;
+    // Count calendar days inclusive (skip Sundays per CR convention)
+    let days = 0;
+    for (
+      let d = new Date(from);
+      d <= to;
+      d = new Date(d.getTime() + DAY_MS)
+    ) {
+      const dow = d.getUTCDay();
+      if (dow !== 0) days++;
+    }
+    vacationHoursByUser.set(
+      v.userId,
+      (vacationHoursByUser.get(v.userId) ?? 0) +
+        days * ATTENDANCE_RULES.regularHoursPerDay
+    );
+  }
+
   type Row = {
     userId: string;
     name: string;
@@ -116,7 +175,9 @@ export default async function PayrollPage({
     hourlyRate: number | null;
     monthlySalary: number | null;
     daysWorked: number;
-    totalHours: number;
+    workedHours: number;     // from punches only
+    paidLeaveHours: number;  // from approved+paid permits & vacations
+    totalHours: number;      // worked + paid leave
     grossPay: number;
     paymentBasis: "hourly" | "salary" | "none";
   };
@@ -126,9 +187,16 @@ export default async function PayrollPage({
     const monthlySalary =
       u.monthlySalary != null ? Number(u.monthlySalary) : null;
 
-    const daily = summarizeByDay(punchesByUser.get(u.id) ?? []);
-    const totalHours = daily.reduce((s, d) => s + d.workedHours, 0);
+    const daily = summarizeByDay(
+      punchesByUser.get(u.id) ?? [],
+      u.lateCutoffMin ?? null
+    );
+    const workedHours = daily.reduce((s, d) => s + d.workedHours, 0);
     const daysWorked = daily.filter((d) => d.entrance != null).length;
+    const paidLeaveHours =
+      (permitHoursByUser.get(u.id) ?? 0) +
+      (vacationHoursByUser.get(u.id) ?? 0);
+    const totalHours = workedHours + paidLeaveHours;
 
     let grossPay = 0;
     let paymentBasis: Row["paymentBasis"] = "none";
@@ -147,6 +215,8 @@ export default async function PayrollPage({
       hourlyRate,
       monthlySalary,
       daysWorked,
+      workedHours: Math.round(workedHours * 100) / 100,
+      paidLeaveHours: Math.round(paidLeaveHours * 100) / 100,
       totalHours: Math.round(totalHours * 100) / 100,
       grossPay,
       paymentBasis,
@@ -174,6 +244,8 @@ export default async function PayrollPage({
     hourlyRate: r.hourlyRate ?? "",
     monthlySalary: r.monthlySalary ?? "",
     daysWorked: r.daysWorked,
+    workedHours: r.workedHours,
+    paidLeaveHours: r.paidLeaveHours,
     totalHours: r.totalHours,
     grossPay: r.grossPay,
   }));
@@ -194,6 +266,8 @@ export default async function PayrollPage({
               { key: "hourlyRate", header: "Tarifa/hora" },
               { key: "monthlySalary", header: "Salario mensual" },
               { key: "daysWorked", header: "Días trabajados" },
+              { key: "workedHours", header: "Horas marcadas" },
+              { key: "paidLeaveHours", header: "Horas con goce" },
               { key: "totalHours", header: "Horas totales" },
               { key: "grossPay", header: "Pago bruto" },
             ]}
@@ -256,8 +330,12 @@ export default async function PayrollPage({
                   <TableHead className="hidden sm:table-cell">Depto.</TableHead>
                   <TableHead>Base</TableHead>
                   <TableHead>Días</TableHead>
-                  <TableHead>Horas</TableHead>
-                  <TableHead>Tarifa</TableHead>
+                  <TableHead>Marcadas</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Con goce
+                  </TableHead>
+                  <TableHead>Total h.</TableHead>
+                  <TableHead className="hidden lg:table-cell">Tarifa</TableHead>
                   <TableHead className="text-right">Pago bruto</TableHead>
                 </TableRow>
               </TableHeader>
@@ -289,9 +367,17 @@ export default async function PayrollPage({
                       {r.daysWorked}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
+                      {r.workedHours.toFixed(1)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell font-mono text-sm text-emerald-600 dark:text-emerald-400">
+                      {r.paidLeaveHours > 0
+                        ? `+${r.paidLeaveHours.toFixed(1)}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm font-medium">
                       {r.totalHours.toFixed(1)}
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell font-mono text-xs text-muted-foreground">
                       {r.paymentBasis === "hourly"
                         ? `${CRC.format(r.hourlyRate ?? 0)}/h`
                         : r.paymentBasis === "salary"

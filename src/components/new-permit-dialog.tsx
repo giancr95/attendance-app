@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -49,6 +50,8 @@ export function NewPermitDialog({ employees }: Props) {
 
   const [userId, setUserId] = useState<string>(employees[0]?.id ?? "");
   const [type, setType] = useState<PermitType>("MEDICAL");
+  const [hours, setHours] = useState<string>("");
+  const [paid, setPaid] = useState<boolean>(true);
   // Base UI's Select passes `string | null` to onValueChange; coerce to "".
   const pickString = (setter: (v: string) => void) => (v: string | null) =>
     setter(v ?? "");
@@ -64,6 +67,8 @@ export function NewPermitDialog({ employees }: Props) {
     setDate(new Date().toISOString().slice(0, 10));
     setDuration("");
     setReason("");
+    setHours("");
+    setPaid(true);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -76,6 +81,8 @@ export function NewPermitDialog({ employees }: Props) {
         date,
         duration,
         reason,
+        hours: hours.trim() === "" ? null : Number(hours),
+        paid,
       });
       if (result.ok) {
         toast.success("Permiso creado", { id });
@@ -161,6 +168,35 @@ export function NewPermitDialog({ employees }: Props) {
                 onChange={(e) => setDuration(e.target.value)}
                 required
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="permit-hours">Horas pagables</Label>
+              <Input
+                id="permit-hours"
+                type="number"
+                step="0.25"
+                min="0"
+                max="24"
+                placeholder="0"
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Se suman a nómina si el permiso está marcado como pagado.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="select-none">Salario</Label>
+              <label className="flex items-center gap-2 py-1 text-sm">
+                <Checkbox
+                  checked={paid}
+                  onCheckedChange={(v) => setPaid(v === true)}
+                />
+                <span>Con goce de salario</span>
+              </label>
             </div>
           </div>
 
