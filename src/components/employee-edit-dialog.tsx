@@ -24,7 +24,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateUserProfile } from "@/lib/user-actions";
-import { DEPARTMENT_LABEL, ROLE_LABEL, USER_STATUS_LABEL } from "@/lib/labels";
+import {
+  DEPARTMENT_LABEL,
+  DEPARTMENT_OPTIONS,
+  ROLE_LABEL,
+  USER_STATUS_LABEL,
+} from "@/lib/labels";
 import type {
   Department,
   Role,
@@ -216,12 +221,11 @@ export function EmployeeEditDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PRODUCCION">
-                    {DEPARTMENT_LABEL.PRODUCCION}
-                  </SelectItem>
-                  <SelectItem value="ADMINISTRACION">
-                    {DEPARTMENT_LABEL.ADMINISTRACION}
-                  </SelectItem>
+                  {DEPARTMENT_OPTIONS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {DEPARTMENT_LABEL[d]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

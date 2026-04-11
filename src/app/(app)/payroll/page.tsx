@@ -34,6 +34,7 @@ import { ReportFilters } from "@/components/report-filters";
 import { ExportButton } from "@/components/export-button";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
 import { summarizeByDay } from "@/lib/punch-interpretation";
+import type { Department } from "@/generated/prisma/client";
 
 export const metadata = {
   title: "Nómina · LCDP",
@@ -111,7 +112,7 @@ export default async function PayrollPage({
   type Row = {
     userId: string;
     name: string;
-    department: "PRODUCCION" | "ADMINISTRACION";
+    department: Department;
     hourlyRate: number | null;
     monthlySalary: number | null;
     daysWorked: number;

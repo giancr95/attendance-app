@@ -25,7 +25,23 @@ export const USER_STATUS_LABEL: Record<UserStatus, string> = {
 export const DEPARTMENT_LABEL: Record<Department, string> = {
   PRODUCCION: "Producción",
   ADMINISTRACION: "Administración",
+  VENTAS: "Ventas",
+  CAJAS: "Cajas",
+  BODEGA: "Bodega",
+  LIMPIEZA: "Limpieza",
+  MANTENIMIENTO: "Mantenimiento",
 };
+
+// Single source of truth for department picker in forms.
+export const DEPARTMENT_OPTIONS: Department[] = [
+  "PRODUCCION",
+  "ADMINISTRACION",
+  "VENTAS",
+  "CAJAS",
+  "BODEGA",
+  "LIMPIEZA",
+  "MANTENIMIENTO",
+];
 
 export const PUNCH_KIND_LABEL: Record<PunchKind, string> = {
   CHECK_IN: "Entrada",

@@ -28,6 +28,11 @@ enum UserStatus {
 enum Department {
   PRODUCCION
   ADMINISTRACION
+  VENTAS
+  CAJAS
+  BODEGA
+  LIMPIEZA
+  MANTENIMIENTO
 }
 
 enum PunchKind {

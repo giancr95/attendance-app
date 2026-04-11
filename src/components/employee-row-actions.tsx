@@ -20,6 +20,7 @@ import {
   setUserRole,
   setUserDepartment,
 } from "@/lib/user-actions";
+import { DEPARTMENT_LABEL, DEPARTMENT_OPTIONS } from "@/lib/labels";
 import type {
   Department,
   Role,
@@ -137,28 +138,20 @@ export function EmployeeRowActions({ user }: Props) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>Departamento</DropdownMenuLabel>
-          <DropdownMenuItem
-            disabled={department === "PRODUCCION"}
-            onClick={() =>
-              run(
-                () => setUserDepartment(userId, "PRODUCCION"),
-                "Cambiando departamento…"
-              )
-            }
-          >
-            Producción
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={department === "ADMINISTRACION"}
-            onClick={() =>
-              run(
-                () => setUserDepartment(userId, "ADMINISTRACION"),
-                "Cambiando departamento…"
-              )
-            }
-          >
-            Administración
-          </DropdownMenuItem>
+          {DEPARTMENT_OPTIONS.map((d) => (
+            <DropdownMenuItem
+              key={d}
+              disabled={department === d}
+              onClick={() =>
+                run(
+                  () => setUserDepartment(userId, d),
+                  "Cambiando departamento…"
+                )
+              }
+            >
+              {DEPARTMENT_LABEL[d]}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

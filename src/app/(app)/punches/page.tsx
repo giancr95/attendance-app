@@ -28,6 +28,7 @@ import { PageHeader } from "@/components/page-header";
 import { SyncPunchesButton } from "@/components/sync-punches-button";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
 import { summarizeByDay } from "@/lib/punch-interpretation";
+import type { Department } from "@/generated/prisma/client";
 
 export const metadata = {
   title: "Marcajes · LCDP",
@@ -66,7 +67,7 @@ export default async function PunchesPage() {
   type Row = {
     userId: string;
     name: string;
-    department: "PRODUCCION" | "ADMINISTRACION";
+    department: Department;
     entrance?: Date;
     exit?: Date;
     workedHours: number;
