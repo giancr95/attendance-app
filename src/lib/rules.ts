@@ -9,9 +9,10 @@
 
 export const ATTENDANCE_RULES = {
   // Expected entrance time. Anyone whose first punch is at or before this
-  // is on time. Anyone after `lateThreshold` is considered late.
+  // is on time. Anyone strictly after `lateThreshold` is considered late.
+  // 07:55:00 sharp is still on time; 07:55:01+ is late.
   entranceTimeCr: { hour: 7, minute: 55 },
-  lateThresholdCr: { hour: 8, minute: 0 },
+  lateThresholdCr: { hour: 7, minute: 55 },
 
   // Standard workday in hours. Used to compute "expected" payroll for
   // salaried employees and to detect overtime.

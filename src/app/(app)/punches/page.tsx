@@ -143,7 +143,7 @@ export default async function PunchesPage() {
         <KpiCard
           label="Llegadas tarde"
           value={lateCount}
-          hint={lateCount > 0 ? "después de 08:00" : undefined}
+          hint={lateCount > 0 ? "después de 07:55" : undefined}
           hintTone="danger"
           valueTone={lateCount > 0 ? "danger" : "default"}
         />
