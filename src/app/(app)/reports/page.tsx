@@ -20,6 +20,7 @@ import { ReportFilters } from "@/components/report-filters";
 import { ExportButton } from "@/components/export-button";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
 import { summarizeByDay } from "@/lib/punch-interpretation";
+import { ATTENDANCE_RULES } from "@/lib/rules";
 import type { Department } from "@/generated/prisma/client";
 
 export const metadata = {
@@ -108,6 +109,7 @@ export default async function ReportsPage({
     daysPresent: number;
     daysAbsent: number;
     lateCount: number;
+    longLunchCount: number;
     totalHours: number;
     avgHours: number;
   };
@@ -120,6 +122,11 @@ export default async function ReportsPage({
     const daysPresent = summaries.filter((s) => !!s.entrance).length;
     const totalHours = summaries.reduce((s, d) => s + d.workedHours, 0);
     const lateCount = summaries.filter((s) => s.isLate).length;
+    const longLunchCount = summaries.filter(
+      (s) =>
+        s.lunchMinutes != null &&
+        s.lunchMinutes > ATTENDANCE_RULES.lunchThresholdMinutes
+    ).length;
     return {
       userId: u.id,
       name: u.name,
@@ -127,6 +134,7 @@ export default async function ReportsPage({
       daysPresent,
       daysAbsent: Math.max(0, workingDays - daysPresent),
       lateCount,
+      longLunchCount,
       totalHours: Math.round(totalHours * 10) / 10,
       avgHours:
         daysPresent > 0
@@ -158,6 +166,7 @@ export default async function ReportsPage({
               daysPresent: r.daysPresent,
               daysAbsent: r.daysAbsent,
               lateCount: r.lateCount,
+              longLunchCount: r.longLunchCount,
               totalHours: r.totalHours,
               avgHours: r.avgHours,
             }))}
@@ -167,6 +176,7 @@ export default async function ReportsPage({
               { key: "daysPresent", header: "Días presente" },
               { key: "daysAbsent", header: "Días ausente" },
               { key: "lateCount", header: "Tardanzas" },
+              { key: "longLunchCount", header: "Almuerzos largos" },
               { key: "totalHours", header: "Horas totales" },
               { key: "avgHours", header: "Promedio horas/día" },
             ]}
@@ -230,6 +240,9 @@ export default async function ReportsPage({
                   <TableHead>Días presente</TableHead>
                   <TableHead>Días ausente</TableHead>
                   <TableHead>Tardanzas</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Alm. largos
+                  </TableHead>
                   <TableHead>Horas totales</TableHead>
                   <TableHead>Prom. h/día</TableHead>
                 </TableRow>
@@ -263,6 +276,15 @@ export default async function ReportsPage({
                       }`}
                     >
                       {r.lateCount}
+                    </TableCell>
+                    <TableCell
+                      className={`hidden md:table-cell font-mono text-sm ${
+                        r.longLunchCount > 0
+                          ? "text-red-600 dark:text-red-400"
+                          : ""
+                      }`}
+                    >
+                      {r.longLunchCount}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {r.totalHours.toFixed(1)}

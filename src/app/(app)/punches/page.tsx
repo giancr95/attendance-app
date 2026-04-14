@@ -28,6 +28,7 @@ import { PageHeader } from "@/components/page-header";
 import { SyncPunchesButton } from "@/components/sync-punches-button";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
 import { summarizeByDay } from "@/lib/punch-interpretation";
+import { ATTENDANCE_RULES } from "@/lib/rules";
 import type { Department } from "@/generated/prisma/client";
 
 export const metadata = {
@@ -76,6 +77,7 @@ export default async function PunchesPage() {
     entrance?: Date;
     exit?: Date;
     workedHours: number;
+    lunchMinutes?: number;
     isLate: boolean;
     punchCount: number;
     present: boolean;
@@ -94,6 +96,7 @@ export default async function PunchesPage() {
       entrance: today?.entrance,
       exit: today?.exit,
       workedHours: today?.workedHours ?? 0,
+      lunchMinutes: today?.lunchMinutes,
       isLate: today?.isLate ?? false,
       punchCount: today?.punchCount ?? 0,
       present: !!today?.entrance,
@@ -171,6 +174,9 @@ export default async function PunchesPage() {
                   <TableHead>Salida</TableHead>
                   <TableHead>Horas</TableHead>
                   <TableHead className="hidden md:table-cell">
+                    Almuerzo
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
                     Marcajes
                   </TableHead>
                   <TableHead className="text-right">Estado</TableHead>
@@ -192,6 +198,9 @@ export default async function PunchesPage() {
                       Presente
                     </Badge>
                   );
+                  const lunchExceeded =
+                    r.lunchMinutes != null &&
+                    r.lunchMinutes > ATTENDANCE_RULES.lunchThresholdMinutes;
                   return (
                     <TableRow key={r.userId}>
                       <TableCell className="text-sm font-medium">
@@ -208,6 +217,17 @@ export default async function PunchesPage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {hours}
+                      </TableCell>
+                      <TableCell
+                        className={`hidden md:table-cell font-mono text-sm ${
+                          lunchExceeded
+                            ? "font-semibold text-red-600 dark:text-red-400"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {r.lunchMinutes != null
+                          ? `${Math.round(r.lunchMinutes)} min`
+                          : "—"}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                         {r.punchCount > 0 ? r.punchCount : "—"}

@@ -23,6 +23,11 @@ export const ATTENDANCE_RULES = {
   // their lunch in/out.
   defaultLunchMinutes: 60,
 
+  // Max acceptable lunch duration. Anything strictly greater than this is
+  // flagged (red in the UI, counted as an "exceeded-lunch" day in reports).
+  // Stored in minutes.
+  lunchThresholdMinutes: 65,
+
   // Workdays per week (Mon-Sat in CR). Sunday is non-working.
   workdayWeekday: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: true, sunday: false } as const,
 } as const;

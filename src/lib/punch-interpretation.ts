@@ -37,7 +37,8 @@ export type DailySummary = {
   lunchIn?: Date;
   exit?: Date;
   punchCount: number;
-  workedHours: number; // exit - entrance - lunch
+  workedHours: number;    // exit - entrance - lunch
+  lunchMinutes?: number;  // lunchIn - lunchOut in minutes, if both present
   isLate: boolean;
 };
 
@@ -110,13 +111,19 @@ function interpretDay(
     exit = sorted[1].timestamp;
   }
 
+  // Compute lunch duration (minutes) if both punches are present.
+  const lunchMinutes =
+    lunchOut && lunchIn
+      ? (lunchIn.getTime() - lunchOut.getTime()) / (1000 * 60)
+      : undefined;
+
   // Compute worked hours: from entrance to exit, minus lunch.
   let workedHours = 0;
   if (entrance && exit) {
     const totalMs = exit.getTime() - entrance.getTime();
     let lunchMs = 0;
-    if (lunchOut && lunchIn) {
-      lunchMs = lunchIn.getTime() - lunchOut.getTime();
+    if (lunchMinutes != null) {
+      lunchMs = lunchMinutes * 60 * 1000;
     } else if (lunchOut && !lunchIn) {
       // Employee left for lunch but didn't punch back — assume default
       lunchMs = ATTENDANCE_RULES.defaultLunchMinutes * 60 * 1000;
@@ -133,6 +140,7 @@ function interpretDay(
     exit,
     punchCount: sorted.length,
     workedHours,
+    lunchMinutes,
     isLate: !!entrance && isLateEntrance(entrance, lateCutoffMinCr),
   };
 }
