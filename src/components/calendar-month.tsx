@@ -57,6 +57,8 @@ const KIND_CLASS: Record<EventKind, string> = {
   TRAINING:
     "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200",
   DEADLINE: "bg-red-100 text-red-900 dark:bg-red-500/20 dark:text-red-200",
+  BIRTHDAY:
+    "bg-pink-100 text-pink-900 dark:bg-pink-500/20 dark:text-pink-200",
   OTHER:
     "bg-slate-100 text-slate-900 dark:bg-slate-500/20 dark:text-slate-200",
 };

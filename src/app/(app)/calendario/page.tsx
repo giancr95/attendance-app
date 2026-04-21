@@ -47,14 +47,16 @@ function isValidYM(s: string): boolean {
   return /^\d{4}-\d{2}$/.test(s);
 }
 
-/** Convert DB date (stored as midnight UTC from the -06:00 input) back to
- * the CR-local YYYY-MM-DD it represents. */
+/** Convert DB date to the YYYY-MM-DD key it represents.
+ *
+ * Prisma DATE columns are timezone-agnostic — they store a calendar date.
+ * When read back, Prisma returns a Date at midnight *UTC* of that same
+ * calendar day. So we just take the UTC ISO date portion; no timezone
+ * shift needed. (Earlier I was shifting -6h which made every event
+ * appear on the previous day.)
+ */
 function dbDateToKey(d: Date): string {
-  // A DATE column stored from "2026-04-21T00:00:00-06:00" lands as
-  // "2026-04-21 06:00:00" UTC. Shifting back by -6h gives 00:00 of the
-  // correct CR day.
-  const shifted = new Date(d.getTime() - 6 * 60 * 60 * 1000);
-  return shifted.toISOString().slice(0, 10);
+  return d.toISOString().slice(0, 10);
 }
 
 type SearchParams = Promise<{ m?: string }>;

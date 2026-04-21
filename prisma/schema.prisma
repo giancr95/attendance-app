@@ -79,6 +79,7 @@ enum EventKind {
   HOLIDAY
   TRAINING
   DEADLINE
+  BIRTHDAY
   OTHER
 }
 

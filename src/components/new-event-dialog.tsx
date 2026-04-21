@@ -33,6 +33,7 @@ const KIND_LABEL: Record<EventKind, string> = {
   HOLIDAY: "Feriado",
   TRAINING: "Capacitación",
   DEADLINE: "Fecha límite",
+  BIRTHDAY: "Cumpleaños",
   OTHER: "Otro",
 };
 
@@ -42,6 +43,7 @@ const KIND_OPTIONS: EventKind[] = [
   "HOLIDAY",
   "TRAINING",
   "DEADLINE",
+  "BIRTHDAY",
   "OTHER",
 ];
 
