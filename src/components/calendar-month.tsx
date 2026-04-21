@@ -79,6 +79,22 @@ function parseYM(ym: string): { year: number; month: number } {
   return { year: y, month: m };
 }
 
+/**
+ * Pretty-print a YYYY-MM-DD key as "sábado, 25 de abril de 2026".
+ * Builds the Date from integer Y/M/D so we never rely on string-parsing
+ * timezone interpretation (which varies across browsers / OS locales).
+ */
+function formatDayKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map((n) => Number.parseInt(n, 10));
+  const localDate = new Date(y, m - 1, d);
+  return localDate.toLocaleDateString("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 function monthName(year: number, month: number) {
   const d = new Date(Date.UTC(year, month - 1, 1));
   return d.toLocaleDateString("es-CR", { month: "long", year: "numeric" });
@@ -299,15 +315,7 @@ export function CalendarMonth({ ym, todayKey, events, canEdit }: Props) {
           <DialogHeader>
             <DialogTitle className="first-letter:uppercase">
               {selectedDay
-                ? new Date(`${selectedDay}T12:00:00-06:00`).toLocaleDateString(
-                    "es-CR",
-                    {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    }
-                  )
+                ? formatDayKey(selectedDay)
                 : ""}
             </DialogTitle>
             <DialogDescription>
