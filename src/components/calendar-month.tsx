@@ -96,7 +96,12 @@ function formatDayKey(dateKey: string): string {
 }
 
 function monthName(year: number, month: number) {
-  const d = new Date(Date.UTC(year, month - 1, 1));
+  // Build in LOCAL time so toLocaleDateString doesn't roll back one day
+  // when the browser is west of UTC (e.g. Costa Rica = UTC-6).
+  // Date.UTC(year, month-1, 1) returns midnight UTC of the 1st; in CR
+  // that's 6 PM of the *previous* day, so the formatter would show the
+  // previous month — which is exactly the bug we just hit.
+  const d = new Date(year, month - 1, 1);
   return d.toLocaleDateString("es-CR", { month: "long", year: "numeric" });
 }
 
