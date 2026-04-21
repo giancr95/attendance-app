@@ -49,11 +49,10 @@ function isValidYM(s: string): boolean {
 
 /** Convert DB date to the YYYY-MM-DD key it represents.
  *
- * Prisma DATE columns are timezone-agnostic — they store a calendar date.
- * When read back, Prisma returns a Date at midnight *UTC* of that same
- * calendar day. So we just take the UTC ISO date portion; no timezone
- * shift needed. (Earlier I was shifting -6h which made every event
- * appear on the previous day.)
+ * Prisma @db.Date columns are timezone-agnostic — they store a calendar
+ * date. When read back, Prisma + adapter-pg return a Date at UTC
+ * midnight of that same calendar day (e.g. "2026-02-14T00:00:00.000Z").
+ * So the UTC ISO date portion is always the correct key.
  */
 function dbDateToKey(d: Date): string {
   return d.toISOString().slice(0, 10);

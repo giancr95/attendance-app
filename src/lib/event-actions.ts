@@ -25,10 +25,16 @@ export type ActionResult<T = undefined> =
   | ({ ok: true } & (T extends undefined ? {} : { data: T }))
   | { ok: false; error: string };
 
-// YYYY-MM-DD → Date at 00:00 -06:00 (CR local) so Postgres stores it as
-// the correct calendar day.
+// YYYY-MM-DD → JS Date at UTC midnight of that calendar day.
+//
+// Postgres @db.Date stores just the calendar day (no time, no zone) and
+// the adapter strips the time via `toISOString().slice(0, 10)`. Using
+// UTC midnight here means that ISO string is always the same calendar
+// day we received, no matter what timezone the server, DB, or driver
+// think they're in. (Earlier I used `-06:00` which produced 06:00 UTC
+// on the same day — equivalent in our UTC containers but ambiguous.)
 function crDate(s: string): Date {
-  return new Date(`${s}T00:00:00-06:00`);
+  return new Date(`${s}T00:00:00Z`);
 }
 
 const CreateEventSchema = z.object({

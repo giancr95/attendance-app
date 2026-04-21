@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -108,6 +108,24 @@ export function NewEventDialog({
   const [yearly, setYearly] = useState<boolean>(
     event?.recurrence === "YEARLY"
   );
+
+  // Re-sync state whenever the `event` prop changes. React's useState
+  // initializer only runs on mount, so editing two different events in a
+  // row (without unmounting the dialog) would keep the first event's
+  // values. This effect fixes that by copying the new event's fields
+  // whenever the prop's identity (event.id) changes.
+  useEffect(() => {
+    if (!event) return;
+    setTitle(event.title);
+    setKind(event.kind);
+    setDate(event.dateKey);
+    setStartTime(event.startTime ?? "");
+    setEndTime(event.endTime ?? "");
+    setLocation(event.location ?? "");
+    setDescription(event.description ?? "");
+    setYearly(event.recurrence === "YEARLY");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id]);
 
   // Birthdays almost always recur yearly — flip the default whenever the
   // user picks that kind (without locking it; they can still uncheck).
