@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3Icon,
+  CalendarDaysIcon,
   ClipboardListIcon,
   DatabaseIcon,
   HexagonIcon,
@@ -37,6 +38,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { title: "Dashboard", href: "/", icon: LayoutDashboardIcon, group: "main" },
   { title: "Marcajes", href: "/punches", icon: TimerIcon, group: "main" },
+  { title: "Calendario", href: "/calendario", icon: CalendarDaysIcon, group: "main" },
   { title: "Vacaciones", href: "/vacations", icon: PalmtreeIcon, group: "main" },
   { title: "Permisos", href: "/permits", icon: ClipboardListIcon, group: "main" },
   { title: "Reportes", href: "/reports", icon: BarChart3Icon, group: "main" },

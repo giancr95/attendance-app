@@ -18,8 +18,12 @@ import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
 import { ReportFilters } from "@/components/report-filters";
 import { ExportButton } from "@/components/export-button";
+import {
+  ReportDetailDialog,
+  type DetailEntry,
+} from "@/components/report-detail-dialog";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
-import { summarizeByDay } from "@/lib/punch-interpretation";
+import { dayKeyCR, summarizeByDay } from "@/lib/punch-interpretation";
 import { ATTENDANCE_RULES } from "@/lib/rules";
 import type { Department } from "@/generated/prisma/client";
 
@@ -112,7 +116,28 @@ export default async function ReportsPage({
     longLunchCount: number;
     totalHours: number;
     avgHours: number;
+    // Per-day details for the click-to-expand popups
+    absentDays: DetailEntry[];
+    lateDays: DetailEntry[];
+    longLunchDays: DetailEntry[];
   };
+
+  // Format a CR-local YYYY-MM-DD to a human-readable label.
+  const dayFmt = new Intl.DateTimeFormat("es-CR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Costa_Rica",
+  });
+  function labelDay(dayKey: string): string {
+    return dayFmt.format(new Date(`${dayKey}T12:00:00-06:00`));
+  }
+  const hhmmCr = new Intl.DateTimeFormat("es-CR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Costa_Rica",
+  });
 
   const rows: Row[] = allUsers.map((u) => {
     const summaries = summarizeByDay(
@@ -121,25 +146,65 @@ export default async function ReportsPage({
     );
     const daysPresent = summaries.filter((s) => !!s.entrance).length;
     const totalHours = summaries.reduce((s, d) => s + d.workedHours, 0);
-    const lateCount = summaries.filter((s) => s.isLate).length;
-    const longLunchCount = summaries.filter(
-      (s) =>
-        s.lunchMinutes != null &&
-        s.lunchMinutes > ATTENDANCE_RULES.lunchThresholdMinutes
-    ).length;
+
+    // Build the day-by-day detail lists.
+    const presentKeys = new Set(
+      summaries.filter((s) => !!s.entrance).map((s) => s.dayKey)
+    );
+
+    const absentDays: DetailEntry[] = [];
+    // Walk every day in the window and flag the ones with no entrance
+    for (
+      let day = new Date(startDate);
+      day < endExclusive;
+      day = new Date(day.getTime() + 24 * 60 * 60 * 1000)
+    ) {
+      if (day.getUTCDay() === 0) continue; // skip Sunday
+      const key = dayKeyCR(day);
+      if (!presentKeys.has(key)) {
+        absentDays.push({ date: labelDay(key) });
+      }
+    }
+
+    const lateDays: DetailEntry[] = summaries
+      .filter((s) => s.isLate)
+      .map((s) => ({
+        date: labelDay(s.dayKey),
+        label: s.entrance ? hhmmCr.format(s.entrance) : "",
+        subtext: "hora de entrada",
+      }));
+
+    const longLunchDays: DetailEntry[] = summaries
+      .filter(
+        (s) =>
+          s.lunchMinutes != null &&
+          s.lunchMinutes > ATTENDANCE_RULES.lunchThresholdMinutes
+      )
+      .map((s) => ({
+        date: labelDay(s.dayKey),
+        label: `${Math.round(s.lunchMinutes!)} min`,
+        subtext:
+          s.lunchOut && s.lunchIn
+            ? `${hhmmCr.format(s.lunchOut)} → ${hhmmCr.format(s.lunchIn)}`
+            : undefined,
+      }));
+
     return {
       userId: u.id,
       name: u.name,
       department: u.department,
       daysPresent,
-      daysAbsent: Math.max(0, workingDays - daysPresent),
-      lateCount,
-      longLunchCount,
+      daysAbsent: absentDays.length,
+      lateCount: lateDays.length,
+      longLunchCount: longLunchDays.length,
       totalHours: Math.round(totalHours * 10) / 10,
       avgHours:
         daysPresent > 0
           ? Math.round((totalHours / daysPresent) * 10) / 10
           : 0,
+      absentDays,
+      lateDays,
+      longLunchDays,
     };
   });
 
@@ -259,32 +324,34 @@ export default async function ReportsPage({
                     <TableCell className="font-mono text-sm">
                       {r.daysPresent}
                     </TableCell>
-                    <TableCell
-                      className={`font-mono text-sm ${
-                        r.daysAbsent > workingDays / 2
-                          ? "text-red-600"
-                          : r.daysAbsent > 0
-                          ? "text-amber-600"
-                          : ""
-                      }`}
-                    >
-                      {r.daysAbsent}
+                    <TableCell className="font-mono text-sm">
+                      <ReportDetailDialog
+                        count={r.daysAbsent}
+                        entries={r.absentDays}
+                        title="Días ausente"
+                        subject={r.name}
+                        tone={
+                          r.daysAbsent > workingDays / 2 ? "danger" : "amber"
+                        }
+                      />
                     </TableCell>
-                    <TableCell
-                      className={`font-mono text-sm ${
-                        r.lateCount > 0 ? "text-amber-600" : ""
-                      }`}
-                    >
-                      {r.lateCount}
+                    <TableCell className="font-mono text-sm">
+                      <ReportDetailDialog
+                        count={r.lateCount}
+                        entries={r.lateDays}
+                        title="Tardanzas"
+                        subject={r.name}
+                        tone="amber"
+                      />
                     </TableCell>
-                    <TableCell
-                      className={`hidden md:table-cell font-mono text-sm ${
-                        r.longLunchCount > 0
-                          ? "text-red-600 dark:text-red-400"
-                          : ""
-                      }`}
-                    >
-                      {r.longLunchCount}
+                    <TableCell className="hidden md:table-cell font-mono text-sm">
+                      <ReportDetailDialog
+                        count={r.longLunchCount}
+                        entries={r.longLunchDays}
+                        title="Almuerzos largos"
+                        subject={r.name}
+                        tone="danger"
+                      />
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {r.totalHours.toFixed(1)}

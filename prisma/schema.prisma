@@ -72,6 +72,16 @@ enum VacationStatus {
   REJECTED
 }
 
+// Categoriza el evento del calendario. Permite estilizar por color.
+enum EventKind {
+  GENERAL
+  MEETING
+  HOLIDAY
+  TRAINING
+  DEADLINE
+  OTHER
+}
+
 // ───────────────────────────── models ─────────────────────────────
 
 model User {
@@ -126,6 +136,7 @@ model User {
   permitsReviewed    Permit[]   @relation("PermitReviewer")
   vacations          Vacation[] @relation("VacationOwner")
   vacationsReviewed  Vacation[] @relation("VacationReviewer")
+  eventsCreated      Event[]    @relation("EventCreator")
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -190,6 +201,25 @@ model Permit {
 
   @@index([userId])
   @@index([status])
+  @@index([date])
+}
+
+// Calendar event. Admins create these; everyone reads them.
+// Time is optional — a full-day event omits startTime/endTime.
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime  @db.Date
+  startTime   String?   // "HH:MM" in CR local, optional
+  endTime     String?   // "HH:MM" in CR local, optional
+  location    String?
+  kind        EventKind @default(GENERAL)
+  createdBy   User      @relation("EventCreator", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   @@index([date])
 }
 
