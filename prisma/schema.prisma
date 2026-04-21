@@ -83,6 +83,14 @@ enum EventKind {
   OTHER
 }
 
+// Recurrencia del evento. NONE = solo en la fecha dada; YEARLY = se
+// muestra cada año en el mismo día del mismo mes (cumpleaños, feriados
+// fijos, aniversarios, etc.).
+enum EventRecurrence {
+  NONE
+  YEARLY
+}
+
 // ───────────────────────────── models ─────────────────────────────
 
 model User {
@@ -208,20 +216,22 @@ model Permit {
 // Calendar event. Admins create these; everyone reads them.
 // Time is optional — a full-day event omits startTime/endTime.
 model Event {
-  id          String    @id @default(cuid())
+  id          String          @id @default(cuid())
   title       String
   description String?
-  date        DateTime  @db.Date
-  startTime   String?   // "HH:MM" in CR local, optional
-  endTime     String?   // "HH:MM" in CR local, optional
+  date        DateTime        @db.Date
+  startTime   String?         // "HH:MM" in CR local, optional
+  endTime     String?         // "HH:MM" in CR local, optional
   location    String?
-  kind        EventKind @default(GENERAL)
-  createdBy   User      @relation("EventCreator", fields: [createdById], references: [id])
+  kind        EventKind       @default(GENERAL)
+  recurrence  EventRecurrence @default(NONE)
+  createdBy   User            @relation("EventCreator", fields: [createdById], references: [id])
   createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   @@index([date])
+  @@index([recurrence])
 }
 
 model Vacation {

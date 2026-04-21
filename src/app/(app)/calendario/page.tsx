@@ -72,18 +72,33 @@ export default async function CalendarioPage({
   const session = await auth();
   const canEdit = session?.user?.role === "ADMIN";
 
-  // Pull events that fall within the displayed month. We widen by ±1 day
-  // to be safe against timezone edge cases.
+  // Pull two sets of events:
+  //   1. Events whose actual date falls in this month (one-off)
+  //   2. Yearly-recurring events whose month matches the displayed month
+  //      (shown every year on the same day of the same month)
   const start = firstOfMonth(ym);
   const end = nextMonth(ym);
+  const [yearStr, monthStr] = ym.split("-");
+  const targetMonthNum = Number.parseInt(monthStr, 10); // 1-12
 
-  const dbEvents = await prisma.event.findMany({
-    where: { date: { gte: start, lt: end } },
-    include: { createdBy: { select: { name: true } } },
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
-  });
+  const [dbEvents, yearlyEvents] = await Promise.all([
+    prisma.event.findMany({
+      where: { date: { gte: start, lt: end }, recurrence: "NONE" },
+      include: { createdBy: { select: { name: true } } },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    }),
+    prisma.event.findMany({
+      where: { recurrence: "YEARLY" },
+      include: { createdBy: { select: { name: true } } },
+    }),
+  ]);
 
-  const events: CalendarEvent[] = dbEvents.map((e) => ({
+  // Helper: turn "2020-02-14" → "2026-02-14" for display in the current year
+  function projectToYear(dateKey: string, year: string): string {
+    return `${year}-${dateKey.slice(5)}`;
+  }
+
+  const oneOff: CalendarEvent[] = dbEvents.map((e) => ({
     id: e.id,
     title: e.title,
     description: e.description,
@@ -92,8 +107,29 @@ export default async function CalendarioPage({
     endTime: e.endTime,
     location: e.location,
     kind: e.kind,
+    recurrence: e.recurrence,
     createdBy: e.createdBy ? { name: e.createdBy.name } : null,
   }));
+
+  const recurring: CalendarEvent[] = yearlyEvents
+    .filter((e) => e.date.getUTCMonth() + 1 === targetMonthNum)
+    .map((e) => {
+      const originalKey = dbDateToKey(e.date);
+      return {
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        dateKey: projectToYear(originalKey, yearStr),
+        startTime: e.startTime,
+        endTime: e.endTime,
+        location: e.location,
+        kind: e.kind,
+        recurrence: e.recurrence,
+        createdBy: e.createdBy ? { name: e.createdBy.name } : null,
+      };
+    });
+
+  const events: CalendarEvent[] = [...oneOff, ...recurring];
 
   const todayKey = todayCrKey();
 

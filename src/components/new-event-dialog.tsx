@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -84,6 +85,14 @@ export function NewEventDialog({
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
+  const [yearly, setYearly] = useState<boolean>(false);
+
+  // Birthdays almost always recur yearly — flip the default whenever the
+  // user picks that kind (without locking it; they can still uncheck).
+  function handleKindChange(k: EventKind) {
+    setKind(k);
+    if (k === "BIRTHDAY") setYearly(true);
+  }
 
   function reset() {
     setTitle("");
@@ -93,6 +102,7 @@ export function NewEventDialog({
     setEndTime("");
     setLocation("");
     setDescription("");
+    setYearly(false);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -107,6 +117,7 @@ export function NewEventDialog({
         endTime: endTime || null,
         location: location || null,
         description: description || null,
+        recurrence: yearly ? "YEARLY" : "NONE",
       });
       if (result.ok) {
         toast.success("Evento creado", { id });
@@ -169,7 +180,9 @@ export function NewEventDialog({
               <Label htmlFor="ev-kind">Tipo</Label>
               <Select
                 value={kind}
-                onValueChange={(v) => setKind((v ?? "GENERAL") as EventKind)}
+                onValueChange={(v) =>
+                  handleKindChange((v ?? "GENERAL") as EventKind)
+                }
               >
                 <SelectTrigger id="ev-kind">
                   <SelectValue />
@@ -184,6 +197,17 @@ export function NewEventDialog({
               </Select>
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={yearly}
+              onCheckedChange={(v) => setYearly(v === true)}
+            />
+            <span>Repetir cada año</span>
+            <span className="text-xs text-muted-foreground">
+              (mismo día del mismo mes)
+            </span>
+          </label>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">

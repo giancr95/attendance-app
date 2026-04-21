@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { EventKind } from "@/generated/prisma/client";
+import { EventKind, EventRecurrence } from "@/generated/prisma/client";
 
 async function requireAdmin() {
   const session = await auth();
@@ -39,6 +39,7 @@ const CreateEventSchema = z.object({
   endTime: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
   location: z.string().max(200).optional().nullable(),
   kind: z.nativeEnum(EventKind).optional(),
+  recurrence: z.nativeEnum(EventRecurrence).optional(),
 });
 
 export type CreateEventInput = z.input<typeof CreateEventSchema>;
@@ -64,6 +65,7 @@ export async function createEvent(
         endTime: parsed.data.endTime || null,
         location: parsed.data.location?.trim() || null,
         kind: parsed.data.kind ?? "GENERAL",
+        recurrence: parsed.data.recurrence ?? "NONE",
         createdById: session.user.id,
       },
     });
@@ -118,6 +120,7 @@ export async function updateEvent(
     if (data.location !== undefined)
       update.location = data.location?.trim() || null;
     if (data.kind !== undefined) update.kind = data.kind;
+    if (data.recurrence !== undefined) update.recurrence = data.recurrence;
 
     await prisma.event.update({ where: { id }, data: update });
     revalidatePath("/calendario");

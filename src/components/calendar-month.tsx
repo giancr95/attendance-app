@@ -2,7 +2,12 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeftIcon, ChevronRightIcon, TrashIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  RepeatIcon,
+  TrashIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,17 +24,21 @@ import {
 import { NewEventDialog, EVENT_KIND_LABEL } from "@/components/new-event-dialog";
 import { deleteEvent } from "@/lib/event-actions";
 import { cn } from "@/lib/utils";
-import type { EventKind } from "@/generated/prisma/client";
+import type {
+  EventKind,
+  EventRecurrence,
+} from "@/generated/prisma/client";
 
 export type CalendarEvent = {
   id: string;
   title: string;
   description: string | null;
-  dateKey: string; // YYYY-MM-DD in CR
+  dateKey: string; // YYYY-MM-DD in CR (projected to current year for YEARLY)
   startTime: string | null;
   endTime: string | null;
   location: string | null;
   kind: EventKind;
+  recurrence: EventRecurrence;
   createdBy: { name: string } | null;
 };
 
@@ -251,13 +260,22 @@ export function CalendarMonth({ ym, todayKey, events, canEdit }: Props) {
                   <span
                     key={e.id}
                     className={cn(
-                      "truncate rounded-sm px-1 py-0.5 text-[11px] leading-tight",
+                      "flex items-center gap-1 truncate rounded-sm px-1 py-0.5 text-[11px] leading-tight",
                       KIND_CLASS[e.kind]
                     )}
-                    title={e.title}
+                    title={
+                      e.recurrence === "YEARLY"
+                        ? `${e.title} (anual)`
+                        : e.title
+                    }
                   >
-                    {e.startTime ? `${e.startTime} ` : ""}
-                    {e.title}
+                    {e.recurrence === "YEARLY" ? (
+                      <RepeatIcon className="size-2.5 shrink-0 opacity-70" />
+                    ) : null}
+                    <span className="truncate">
+                      {e.startTime ? `${e.startTime} ` : ""}
+                      {e.title}
+                    </span>
                   </span>
                 ))}
                 {dayEvents.length > 3 ? (
@@ -378,6 +396,12 @@ function EventRow({
           <Badge variant="outline" className="text-[10px]">
             {EVENT_KIND_LABEL[event.kind]}
           </Badge>
+          {event.recurrence === "YEARLY" ? (
+            <Badge variant="outline" className="gap-1 text-[10px]">
+              <RepeatIcon className="size-2.5" />
+              Anual
+            </Badge>
+          ) : null}
         </div>
         <div className="mt-0.5 text-xs opacity-80">
           {timeLabel}
