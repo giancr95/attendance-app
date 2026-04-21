@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createEvent } from "@/lib/event-actions";
+import { createEvent, updateEvent } from "@/lib/event-actions";
 import type { EventKind } from "@/generated/prisma/client";
 
 const KIND_LABEL: Record<EventKind, string> = {
@@ -48,6 +48,19 @@ const KIND_OPTIONS: EventKind[] = [
   "OTHER",
 ];
 
+export type EventFormEvent = {
+  id: string;
+  title: string;
+  description: string | null;
+  /** YYYY-MM-DD in CR local. */
+  dateKey: string;
+  startTime: string | null;
+  endTime: string | null;
+  location: string | null;
+  kind: EventKind;
+  recurrence: "NONE" | "YEARLY";
+};
+
 type Props = {
   /** Pre-selected date (YYYY-MM-DD). Defaults to today (CR). */
   defaultDate?: string;
@@ -56,6 +69,8 @@ type Props = {
   /** Controlled open state (for programmatic open from calendar cells). */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** When provided, the dialog switches to edit mode for this event. */
+  event?: EventFormEvent;
 };
 
 function todayCr(): string {
@@ -69,7 +84,10 @@ export function NewEventDialog({
   compact,
   open: controlledOpen,
   onOpenChange,
+  event,
 }: Props) {
+  const isEdit = event != null;
+
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = (v: boolean) => {
@@ -78,14 +96,18 @@ export function NewEventDialog({
   };
   const [pending, start] = useTransition();
 
-  const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<EventKind>("GENERAL");
-  const [date, setDate] = useState<string>(defaultDate ?? todayCr());
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [yearly, setYearly] = useState<boolean>(false);
+  const [title, setTitle] = useState(event?.title ?? "");
+  const [kind, setKind] = useState<EventKind>(event?.kind ?? "GENERAL");
+  const [date, setDate] = useState<string>(
+    event?.dateKey ?? defaultDate ?? todayCr()
+  );
+  const [startTime, setStartTime] = useState(event?.startTime ?? "");
+  const [endTime, setEndTime] = useState(event?.endTime ?? "");
+  const [location, setLocation] = useState(event?.location ?? "");
+  const [description, setDescription] = useState(event?.description ?? "");
+  const [yearly, setYearly] = useState<boolean>(
+    event?.recurrence === "YEARLY"
+  );
 
   // Birthdays almost always recur yearly — flip the default whenever the
   // user picks that kind (without locking it; they can still uncheck).
@@ -95,21 +117,34 @@ export function NewEventDialog({
   }
 
   function reset() {
-    setTitle("");
-    setKind("GENERAL");
-    setDate(defaultDate ?? todayCr());
-    setStartTime("");
-    setEndTime("");
-    setLocation("");
-    setDescription("");
-    setYearly(false);
+    // Only reset to blank when we're creating; in edit mode keep the
+    // event's own values so reopening the dialog shows them again.
+    if (isEdit && event) {
+      setTitle(event.title);
+      setKind(event.kind);
+      setDate(event.dateKey);
+      setStartTime(event.startTime ?? "");
+      setEndTime(event.endTime ?? "");
+      setLocation(event.location ?? "");
+      setDescription(event.description ?? "");
+      setYearly(event.recurrence === "YEARLY");
+    } else {
+      setTitle("");
+      setKind("GENERAL");
+      setDate(defaultDate ?? todayCr());
+      setStartTime("");
+      setEndTime("");
+      setLocation("");
+      setDescription("");
+      setYearly(false);
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     start(async () => {
-      const id = toast.loading("Creando evento…");
-      const result = await createEvent({
+      const id = toast.loading(isEdit ? "Guardando…" : "Creando evento…");
+      const payload = {
         title,
         kind,
         date,
@@ -117,11 +152,14 @@ export function NewEventDialog({
         endTime: endTime || null,
         location: location || null,
         description: description || null,
-        recurrence: yearly ? "YEARLY" : "NONE",
-      });
+        recurrence: (yearly ? "YEARLY" : "NONE") as "YEARLY" | "NONE",
+      };
+      const result = isEdit
+        ? await updateEvent({ id: event!.id, ...payload })
+        : await createEvent(payload);
       if (result.ok) {
-        toast.success("Evento creado", { id });
-        reset();
+        toast.success(isEdit ? "Evento actualizado" : "Evento creado", { id });
+        if (!isEdit) reset();
         setOpen(false);
       } else {
         toast.error(result.error, { id });
@@ -147,7 +185,7 @@ export function NewEventDialog({
       ) : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuevo evento</DialogTitle>
+          <DialogTitle>{isEdit ? "Editar evento" : "Nuevo evento"}</DialogTitle>
           <DialogDescription>
             Visible para todos los empleados en el calendario.
           </DialogDescription>
@@ -259,7 +297,13 @@ export function NewEventDialog({
               Cancelar
             </DialogClose>
             <Button type="submit" disabled={pending || !title.trim()}>
-              {pending ? "Creando…" : "Crear evento"}
+              {pending
+                ? isEdit
+                  ? "Guardando…"
+                  : "Creando…"
+                : isEdit
+                ? "Guardar cambios"
+                : "Crear evento"}
             </Button>
           </DialogFooter>
         </form>

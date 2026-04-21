@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  PencilIcon,
   RepeatIcon,
   TrashIcon,
 } from "lucide-react";
@@ -365,6 +366,7 @@ function EventRow({
   canEdit: boolean;
 }) {
   const [pending, start] = useTransition();
+  const [editOpen, setEditOpen] = useState(false);
 
   function handleDelete() {
     if (!confirm(`¿Eliminar el evento "${event.title}"?`)) return;
@@ -384,49 +386,81 @@ function EventRow({
       : "Todo el día";
 
   return (
-    <div
-      className={cn(
-        "flex items-start justify-between gap-2 rounded-md border border-border/60 p-2.5",
-        KIND_CLASS[event.kind]
-      )}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{event.title}</span>
-          <Badge variant="outline" className="text-[10px]">
-            {EVENT_KIND_LABEL[event.kind]}
-          </Badge>
-          {event.recurrence === "YEARLY" ? (
-            <Badge variant="outline" className="gap-1 text-[10px]">
-              <RepeatIcon className="size-2.5" />
-              Anual
+    <>
+      <div
+        className={cn(
+          "flex items-start justify-between gap-2 rounded-md border border-border/60 p-2.5",
+          KIND_CLASS[event.kind]
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{event.title}</span>
+            <Badge variant="outline" className="text-[10px]">
+              {EVENT_KIND_LABEL[event.kind]}
             </Badge>
+            {event.recurrence === "YEARLY" ? (
+              <Badge variant="outline" className="gap-1 text-[10px]">
+                <RepeatIcon className="size-2.5" />
+                Anual
+              </Badge>
+            ) : null}
+          </div>
+          <div className="mt-0.5 text-xs opacity-80">
+            {timeLabel}
+            {event.location ? ` · ${event.location}` : ""}
+          </div>
+          {event.description ? (
+            <div className="mt-1 text-xs opacity-80">{event.description}</div>
+          ) : null}
+          {event.createdBy?.name ? (
+            <div className="mt-1 text-[10px] opacity-60">
+              por {event.createdBy.name}
+            </div>
           ) : null}
         </div>
-        <div className="mt-0.5 text-xs opacity-80">
-          {timeLabel}
-          {event.location ? ` · ${event.location}` : ""}
-        </div>
-        {event.description ? (
-          <div className="mt-1 text-xs opacity-80">{event.description}</div>
-        ) : null}
-        {event.createdBy?.name ? (
-          <div className="mt-1 text-[10px] opacity-60">
-            por {event.createdBy.name}
+        {canEdit ? (
+          <div className="flex flex-col gap-0.5 sm:flex-row">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={pending}
+              onClick={() => setEditOpen(true)}
+              aria-label="Editar"
+            >
+              <PencilIcon className="size-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              disabled={pending}
+              onClick={handleDelete}
+              aria-label="Eliminar"
+            >
+              <TrashIcon className="size-3.5" />
+            </Button>
           </div>
         ) : null}
       </div>
-      {canEdit ? (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={pending}
-          onClick={handleDelete}
-          aria-label="Eliminar"
-        >
-          <TrashIcon className="size-3.5" />
-        </Button>
+
+      {/* Controlled edit dialog rendered alongside the row. */}
+      {editOpen ? (
+        <NewEventDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          event={{
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            dateKey: event.dateKey,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            location: event.location,
+            kind: event.kind,
+            recurrence: event.recurrence,
+          }}
+        />
       ) : null}
-    </div>
+    </>
   );
 }
