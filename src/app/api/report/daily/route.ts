@@ -41,15 +41,19 @@ export async function POST(req: Request) {
   }
 }
 
-// Inline PDF preview — same token gate, but no WAHA send. Handy for
-// checking the layout from a browser.
+// Inline PDF — same token gate, no WAHA send. Accepts ?date=YYYY-MM-DD
+// so the cron can post a link like /api/report/daily?token=…&date=…
+// to WhatsApp and the phone can open that date's report on demand.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   if (!isAuthorized(req, url)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const report = await buildDailyReport();
+  const dateParam = url.searchParams.get("date");
+  const dayKey = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
+
+  const report = await buildDailyReport(dayKey ?? new Date());
   const pdf = await renderDailyReportPdf(report);
 
   return new NextResponse(Buffer.from(pdf), {

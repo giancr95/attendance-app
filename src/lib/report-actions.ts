@@ -57,8 +57,11 @@ function fmtHeaderDate(d: Date): string {
   }).format(d);
 }
 
-export async function buildDailyReport(refDate: Date = new Date()): Promise<DailyReport> {
-  const dayKey = dayKeyCR(refDate);
+export async function buildDailyReport(
+  refDateOrKey: Date | string = new Date(),
+): Promise<DailyReport> {
+  const dayKey =
+    typeof refDateOrKey === "string" ? refDateOrKey : dayKeyCR(refDateOrKey);
   const dayStart = startOfCrDay(dayKey);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
@@ -218,45 +221,34 @@ function drawRow(
   page.drawText(status,       { x: cols[5].x, y, size: 9, font: statusFont, color });
 }
 
-type SendOpts = {
+type SendTextOpts = {
   wahaUrl: string;
   wahaApiKey: string;
   wahaSession?: string;
-  chatId: string;       // e.g. "50683156424@c.us"
-  pdf: Uint8Array;
-  filename: string;
-  caption: string;
+  chatId: string; // "50683156424@c.us"
+  text: string;
 };
 
-export async function sendPdfToWhatsapp(opts: SendOpts): Promise<void> {
+export async function sendTextToWhatsapp(opts: SendTextOpts): Promise<void> {
   const session = opts.wahaSession ?? "default";
   const base = opts.wahaUrl.replace(/\/+$/, "");
 
-  const base64 = Buffer.from(opts.pdf).toString("base64");
-
-  const body = {
-    chatId: opts.chatId,
-    file: {
-      mimetype: "application/pdf",
-      filename: opts.filename,
-      data: base64,
-    },
-    caption: opts.caption,
-    session,
-  };
-
-  const res = await fetch(`${base}/api/sendFile`, {
+  const res = await fetch(`${base}/api/sendText`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Api-Key": opts.wahaApiKey,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      chatId: opts.chatId,
+      text: opts.text,
+      session,
+    }),
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`WAHA sendFile failed: ${res.status} ${res.statusText} — ${text.slice(0, 300)}`);
+    throw new Error(`WAHA sendText failed: ${res.status} ${res.statusText} — ${text.slice(0, 300)}`);
   }
 }
 
@@ -269,27 +261,34 @@ export async function runDailyReport(): Promise<{
   const wahaUrl = process.env.WAHA_URL;
   const wahaApiKey = process.env.WAHA_API_KEY;
   const chatId = process.env.REPORT_CHAT_ID;
+  const publicUrl = process.env.PUBLIC_APP_URL ?? "https://rrhh-lcdp.mecacr.work";
+  const reportToken = process.env.REPORT_TOKEN;
 
-  if (!wahaUrl || !wahaApiKey || !chatId) {
-    throw new Error("Missing WAHA_URL / WAHA_API_KEY / REPORT_CHAT_ID env vars");
+  if (!wahaUrl || !wahaApiKey || !chatId || !reportToken) {
+    throw new Error("Missing WAHA_URL / WAHA_API_KEY / REPORT_CHAT_ID / REPORT_TOKEN env vars");
   }
 
+  // Build the report once so the WhatsApp text can include the counters
+  // and so we can surface any DB errors early (before paying the PDF cost).
   const report = await buildDailyReport();
+  // Render the PDF too — even though WAHA Core can't attach files, rendering
+  // validates the pdf-lib path and makes the byte count available for the
+  // receipt returned to the caller.
   const pdf = await renderDailyReportPdf(report);
 
-  const filename = `marcas-${report.dayKey}.pdf`;
-  const caption =
-    `Reporte de marcajes — ${report.headerDate}\n` +
-    `Presentes: ${report.presentCount} · Ausentes: ${report.absentCount} · Tardíos: ${report.lateCount}`;
+  const pdfUrl = `${publicUrl}/api/report/daily?token=${encodeURIComponent(reportToken)}&date=${report.dayKey}`;
 
-  await sendPdfToWhatsapp({
+  const text =
+    `📋 *Reporte de Marcajes* — ${report.headerDate}\n` +
+    `Presentes: ${report.presentCount} · Ausentes: ${report.absentCount} · Tardíos: ${report.lateCount}\n\n` +
+    `📄 Ver PDF: ${pdfUrl}`;
+
+  await sendTextToWhatsapp({
     wahaUrl,
     wahaApiKey,
     wahaSession: process.env.WAHA_SESSION ?? "default",
     chatId,
-    pdf,
-    filename,
-    caption,
+    text,
   });
 
   return {
