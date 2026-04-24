@@ -207,6 +207,97 @@ export async function updateUserProfile(
   }
 }
 
+// Create a new employee (role=EMPLOYEE). If `deviceUserId` is provided,
+// the employee is linked to the biometric clock by that PIN and the next
+// sync will pull their punches automatically. If omitted, they're a
+// manual-entry employee — an admin enters their punches by hand through
+// the ManualPunchDialog.
+//
+// Email/password are optional; a manual employee without login won't be
+// able to sign in but they'll still appear in reports, payroll, etc.
+export type CreateEmployeeInput = {
+  name: string;
+  department: Department;
+  email?: string;
+  password?: string;
+  hireDate?: Date | null;
+  hourlyRate?: number | null;
+  monthlySalary?: number | null;
+  lateCutoffMin?: number | null;
+  deviceUserId?: number | null;
+};
+
+export async function createEmployee(
+  input: CreateEmployeeInput
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+
+    const name = input.name.trim();
+    if (!name) return { ok: false, error: "Nombre requerido." };
+
+    if (input.email && !/^[^@]+@[^@]+\.[^@]+$/.test(input.email)) {
+      return { ok: false, error: "Correo inválido." };
+    }
+    if (input.password && input.password.length < 6) {
+      return {
+        ok: false,
+        error: "La contraseña debe tener al menos 6 caracteres.",
+      };
+    }
+
+    // Uniqueness checks for optional fields
+    if (input.email) {
+      const existingEmail = await prisma.user.findUnique({
+        where: { email: input.email },
+      });
+      if (existingEmail) {
+        return { ok: false, error: "Ya existe un usuario con ese correo." };
+      }
+    }
+    if (input.deviceUserId != null) {
+      const existingDev = await prisma.user.findUnique({
+        where: { deviceUserId: input.deviceUserId },
+      });
+      if (existingDev) {
+        return {
+          ok: false,
+          error: `Ya existe un usuario con PIN ${input.deviceUserId}.`,
+        };
+      }
+    }
+
+    const passwordHash = input.password
+      ? await bcrypt.hash(input.password, 12)
+      : null;
+
+    await prisma.user.create({
+      data: {
+        name,
+        email: input.email || null,
+        passwordHash,
+        role: "EMPLOYEE",
+        status: "ACTIVE",
+        department: input.department,
+        hireDate: input.hireDate ?? null,
+        hourlyRate: input.hourlyRate ?? null,
+        monthlySalary: input.monthlySalary ?? null,
+        lateCutoffMin: input.lateCutoffMin ?? null,
+        deviceUserId: input.deviceUserId ?? null,
+      },
+    });
+
+    revalidatePath("/employees");
+    revalidatePath("/");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
 // Convenience: create a brand-new web-only user (no device link).
 // Used for admin/management accounts that don't clock in physically.
 export type CreateUserInput = {

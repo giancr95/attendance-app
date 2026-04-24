@@ -22,6 +22,7 @@ import {
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
 import { SyncUsersButton } from "@/components/sync-users-button";
+import { NewEmployeeDialog } from "@/components/new-employee-dialog";
 import { EmployeeRowActions } from "@/components/employee-row-actions";
 import { ExportButton } from "@/components/export-button";
 import {
@@ -123,6 +124,7 @@ export default async function EmployeesPage() {
                 { key: "face", header: "Rostro" },
               ]}
             />
+            <NewEmployeeDialog />
             <SyncUsersButton />
           </>
         }
@@ -242,6 +244,7 @@ export default async function EmployeesPage() {
                               : null,
                           hireDate: u.hireDate,
                           lateCutoffMin: u.lateCutoffMin,
+                          deviceUserId: u.deviceUserId,
                           department: u.department,
                           role: u.role,
                           status: u.status,

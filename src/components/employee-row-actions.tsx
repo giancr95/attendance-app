@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
+import { ManualPunchDialog } from "@/components/manual-punch-dialog";
 import {
   setUserStatus,
   setUserRole,
@@ -36,6 +37,7 @@ type EditProps = {
   monthlySalary: number | null;
   hireDate: Date | null;
   lateCutoffMin: number | null;
+  deviceUserId: number | null;
   department: Department;
   role: Role;
   status: UserStatus;
@@ -48,6 +50,13 @@ type Props = {
 export function EmployeeRowActions({ user }: Props) {
   const { id: userId, status, role, department } = user;
   const [editOpen, setEditOpen] = useState(false);
+  const [manualPunchOpen, setManualPunchOpen] = useState(false);
+
+  // Manual punch entry is only available for employees who aren't on
+  // the clock. The server action also enforces this, but gating the UI
+  // keeps the menu cleaner.
+  const canPunchManually =
+    user.role === "EMPLOYEE" && user.deviceUserId == null;
   const [pending, start] = useTransition();
 
   function run<T>(fn: () => Promise<{ ok: true } | { ok: false; error: string }>, label: string) {
@@ -64,13 +73,19 @@ export function EmployeeRowActions({ user }: Props) {
 
   return (
     <>
-      {/* Edit dialog is rendered as a sibling of the menu so it survives the
-          menu closing on item click. The dropdown item just toggles `editOpen`. */}
+      {/* Dialogs rendered as siblings so they survive the menu closing. */}
       <EmployeeEditDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         user={user}
       />
+      {canPunchManually ? (
+        <ManualPunchDialog
+          open={manualPunchOpen}
+          onOpenChange={setManualPunchOpen}
+          user={{ id: user.id, name: user.name }}
+        />
+      ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -85,6 +100,11 @@ export function EmployeeRowActions({ user }: Props) {
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             Editar empleado…
           </DropdownMenuItem>
+          {canPunchManually ? (
+            <DropdownMenuItem onClick={() => setManualPunchOpen(true)}>
+              Registrar marcaje manual…
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
