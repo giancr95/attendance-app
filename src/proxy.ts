@@ -7,8 +7,9 @@ export const config = {
     // Run on every page route except:
     //  - NextAuth API routes
     //  - the /api/sync endpoint (token-protected, called by cron)
+    //  - the /api/report/* endpoints (token-protected, called by cron)
     //  - Next.js internals + static assets
     //  - the public /login page
-    "/((?!api/auth|api/sync|_next/static|_next/image|favicon.ico|login).*)",
+    "/((?!api/auth|api/sync|api/report|_next/static|_next/image|favicon.ico|login).*)",
   ],
 };
