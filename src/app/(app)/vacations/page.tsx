@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { formatDate } from "@/lib/format";
+import { formatDateOnly } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -90,8 +90,8 @@ export default async function VacationsPage() {
     employee: v.user.name,
     department: DEPARTMENT_LABEL[v.user.department],
     type: VACATION_TYPE_LABEL[v.type],
-    startDate: formatDate(v.startDate),
-    endDate: formatDate(v.endDate),
+    startDate: formatDateOnly(v.startDate),
+    endDate: formatDateOnly(v.endDate),
     days: v.days,
     status: VACATION_STATUS_LABEL[v.status],
     notes: v.notes ?? "",
@@ -194,10 +194,10 @@ export default async function VacationsPage() {
                         {DEPARTMENT_LABEL[v.user.department]}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {formatDate(v.startDate)}
+                        {formatDateOnly(v.startDate)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {formatDate(v.endDate)}
+                        {formatDateOnly(v.endDate)}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {v.days}

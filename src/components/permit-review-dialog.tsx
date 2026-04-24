@@ -22,7 +22,7 @@ import {
   PERMIT_TYPE_LABEL,
   DEPARTMENT_LABEL,
 } from "@/lib/labels";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateOnly } from "@/lib/format";
 import type {
   Department,
   PermitStatus,
@@ -87,7 +87,7 @@ export function PermitReviewDialog({ permit }: Props) {
         <dl className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Fecha</dt>
-            <dd>{formatDate(permit.date)}</dd>
+            <dd>{formatDateOnly(permit.date)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Estado</dt>

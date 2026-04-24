@@ -22,7 +22,7 @@ import {
   VACATION_TYPE_LABEL,
   DEPARTMENT_LABEL,
 } from "@/lib/labels";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateOnly } from "@/lib/format";
 import type {
   Department,
   VacationStatus,
@@ -87,11 +87,11 @@ export function VacationReviewDialog({ vacation }: Props) {
         <dl className="flex flex-col gap-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Inicio</dt>
-            <dd>{formatDate(vacation.startDate)}</dd>
+            <dd>{formatDateOnly(vacation.startDate)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Fin</dt>
-            <dd>{formatDate(vacation.endDate)}</dd>
+            <dd>{formatDateOnly(vacation.endDate)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Estado</dt>

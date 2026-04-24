@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { formatDate, startOfTodayCR } from "@/lib/format";
+import { formatDateOnly, startOfTodayCR } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -82,7 +82,7 @@ export default async function PermitsPage() {
     employee: p.user.name,
     department: DEPARTMENT_LABEL[p.user.department],
     type: PERMIT_TYPE_LABEL[p.type],
-    date: formatDate(p.date),
+    date: formatDateOnly(p.date),
     duration: p.duration,
     reason: p.reason,
     status: PERMIT_STATUS_LABEL[p.status],
@@ -185,7 +185,7 @@ export default async function PermitsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {formatDate(p.date)}
+                        {formatDateOnly(p.date)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {p.duration}

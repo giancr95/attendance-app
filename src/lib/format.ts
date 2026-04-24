@@ -31,6 +31,23 @@ export function formatDate(d: Date | string) {
   return dateFmt.format(new Date(d));
 }
 
+// Formatter for DAY-ONLY values (no time component semantically).
+// These are stored as timestamps at UTC midnight via z.coerce.date() —
+// with a CR-timezone formatter that instant lands at 18:00 the previous
+// day, which is why Permit.date / Vacation.startDate etc. appeared off
+// by one. Formatting in UTC sidesteps the shift. Use this whenever the
+// value represents "a calendar day" rather than an instant.
+const dayOnlyFmt = new Intl.DateTimeFormat("es-CR", {
+  timeZone: "UTC",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
+export function formatDateOnly(d: Date | string) {
+  return dayOnlyFmt.format(new Date(d));
+}
+
 export function formatTime(d: Date | string) {
   return timeFmt.format(new Date(d));
 }
