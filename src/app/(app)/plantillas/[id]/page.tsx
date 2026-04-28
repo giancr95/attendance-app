@@ -46,7 +46,7 @@ export default async function TemplateFormPage({
 
       <PageHeader title={tpl.title} subtitle={tpl.description} />
 
-      <TemplateForm template={tpl} />
+      <TemplateForm templateId={tpl.id} />
     </div>
   );
 }

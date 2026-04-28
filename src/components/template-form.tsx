@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { downloadTemplatePdf } from "@/lib/template-pdf";
+import { TEMPLATE_BY_ID } from "@/lib/templates";
 import type {
-  Template,
   TemplateField,
   TemplateSection,
 } from "@/lib/templates";
@@ -25,10 +25,22 @@ import type {
 type Values = Record<string, unknown>;
 
 type Props = {
-  template: Template;
+  // Pass the template id (a serializable string) instead of the whole
+  // Template object. Templates carry a `filenameForValues` function that
+  // can't cross the RSC boundary; we look the template up here on the
+  // client instead.
+  templateId: string;
 };
 
-export function TemplateForm({ template }: Props) {
+export function TemplateForm({ templateId }: Props) {
+  const template = TEMPLATE_BY_ID[templateId];
+  if (!template) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Plantilla no encontrada.
+      </p>
+    );
+  }
   // Local-only state. Resets on unmount (i.e. when user navigates away).
   const [values, setValues] = useState<Values>({});
   const [pending, start] = useTransition();
