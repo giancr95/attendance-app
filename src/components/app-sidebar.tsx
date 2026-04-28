@@ -7,6 +7,7 @@ import {
   CalendarDaysIcon,
   ClipboardListIcon,
   DatabaseIcon,
+  FileTextIcon,
   HexagonIcon,
   LayoutDashboardIcon,
   PalmtreeIcon,
@@ -44,6 +45,7 @@ const NAV: NavItem[] = [
   { title: "Reportes", href: "/reports", icon: BarChart3Icon, group: "main" },
   { title: "Nómina", href: "/payroll", icon: WalletIcon, group: "main" },
   { title: "Empleados", href: "/employees", icon: UsersIcon, group: "main" },
+  { title: "Plantillas", href: "/plantillas", icon: FileTextIcon, group: "main" },
   { title: "Datos crudos", href: "/raw", icon: DatabaseIcon, group: "admin" },
   { title: "Reglas", href: "/rules", icon: SettingsIcon, group: "admin" },
 ];
