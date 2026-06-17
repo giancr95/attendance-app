@@ -10,6 +10,7 @@ export const config = {
     //  - the /api/report/* endpoints (token-protected, called by cron)
     //  - Next.js internals + static assets
     //  - the public /login page
-    "/((?!api/auth|api/sync|api/report|_next/static|_next/image|favicon.ico|login).*)",
+    //  - the /logout endpoint (clears the session cookie itself)
+    "/((?!api/auth|api/sync|api/report|_next/static|_next/image|favicon.ico|login|logout).*)",
   ],
 };
