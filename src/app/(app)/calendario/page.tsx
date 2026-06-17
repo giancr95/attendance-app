@@ -8,6 +8,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import {
   CalendarMonth,
   type CalendarEvent,
@@ -65,6 +66,7 @@ export default async function CalendarioPage({
 }: {
   searchParams: SearchParams;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
   const ym = sp.m && isValidYM(sp.m) ? sp.m : thisMonthCr();
 

@@ -24,12 +24,22 @@ import {
   VACATION_TYPE_LABEL,
 } from "@/lib/labels";
 import { vacationBalance } from "@/lib/vacation-calc";
+import { requireUser } from "@/lib/authz";
+import { EmployeeVacations } from "@/components/employee-views";
 
 export const metadata = {
   title: "Vacaciones · LCDP",
 };
 
 export default async function VacationsPage() {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") {
+    return <EmployeeVacations userId={user.id} name={user.name ?? "Empleado"} />;
+  }
+  return <AdminVacations />;
+}
+
+async function AdminVacations() {
   const quarter = Math.floor(new Date().getUTCMonth() / 3);
   const quarterStart = new Date(new Date().getUTCFullYear(), quarter * 3, 1);
 

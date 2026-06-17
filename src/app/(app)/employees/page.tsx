@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import { SyncUsersButton } from "@/components/sync-users-button";
 import { NewEmployeeDialog } from "@/components/new-employee-dialog";
 import { EmployeeRowActions } from "@/components/employee-row-actions";
@@ -44,6 +45,7 @@ function initials(name: string) {
 }
 
 export default async function EmployeesPage() {
+  await requireAdmin();
   const [users, device, lastPunches, vacations] = await Promise.all([
     prisma.user.findMany({
       orderBy: [{ status: "asc" }, { name: "asc" }],

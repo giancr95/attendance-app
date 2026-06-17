@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import { SyncPunchesButton } from "@/components/sync-punches-button";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
 import { summarizeByDay } from "@/lib/punch-interpretation";
@@ -38,6 +39,7 @@ export const metadata = {
 const DEVICE_SERIAL = "UDP3243700044";
 
 export default async function PunchesPage() {
+  await requireAdmin();
   const today = startOfTodayCR();
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 

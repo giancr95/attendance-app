@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import { ReportFilters } from "@/components/report-filters";
 import { ExportButton } from "@/components/export-button";
 import {
@@ -46,6 +47,7 @@ export default async function ReportsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
 
   // Default window: last 30 days, ending today (in CR time).

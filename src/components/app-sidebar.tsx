@@ -28,30 +28,38 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import type { Role } from "@/generated/prisma/client";
 
 type NavItem = {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   group?: "main" | "admin";
+  // Hidden from EMPLOYEE-role users. Anything that shows other people's
+  // data (marcajes, nómina, reportes, calendario, empleados…) is admin-only.
+  adminOnly?: boolean;
+  // Title shown to employees, when it should read as "mine".
+  employeeTitle?: string;
 };
 
 const NAV: NavItem[] = [
-  { title: "Dashboard", href: "/", icon: LayoutDashboardIcon, group: "main" },
-  { title: "Marcajes", href: "/punches", icon: TimerIcon, group: "main" },
-  { title: "Calendario", href: "/calendario", icon: CalendarDaysIcon, group: "main" },
-  { title: "Vacaciones", href: "/vacations", icon: PalmtreeIcon, group: "main" },
-  { title: "Permisos", href: "/permits", icon: ClipboardListIcon, group: "main" },
-  { title: "Reportes", href: "/reports", icon: BarChart3Icon, group: "main" },
-  { title: "Nómina", href: "/payroll", icon: WalletIcon, group: "main" },
-  { title: "Empleados", href: "/employees", icon: UsersIcon, group: "main" },
-  { title: "Plantillas", href: "/plantillas", icon: FileTextIcon, group: "main" },
-  { title: "Datos crudos", href: "/raw", icon: DatabaseIcon, group: "admin" },
-  { title: "Reglas", href: "/rules", icon: SettingsIcon, group: "admin" },
+  { title: "Dashboard", href: "/", icon: LayoutDashboardIcon, group: "main", employeeTitle: "Inicio" },
+  { title: "Marcajes", href: "/punches", icon: TimerIcon, group: "main", adminOnly: true },
+  { title: "Calendario", href: "/calendario", icon: CalendarDaysIcon, group: "main", adminOnly: true },
+  { title: "Vacaciones", href: "/vacations", icon: PalmtreeIcon, group: "main", employeeTitle: "Mis vacaciones" },
+  { title: "Permisos", href: "/permits", icon: ClipboardListIcon, group: "main", employeeTitle: "Mis permisos" },
+  { title: "Reportes", href: "/reports", icon: BarChart3Icon, group: "main", adminOnly: true },
+  { title: "Nómina", href: "/payroll", icon: WalletIcon, group: "main", adminOnly: true },
+  { title: "Empleados", href: "/employees", icon: UsersIcon, group: "main", adminOnly: true },
+  { title: "Plantillas", href: "/plantillas", icon: FileTextIcon, group: "main", adminOnly: true },
+  { title: "Datos crudos", href: "/raw", icon: DatabaseIcon, group: "admin", adminOnly: true },
+  { title: "Reglas", href: "/rules", icon: SettingsIcon, group: "admin", adminOnly: true },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+  const isAdmin = role === "ADMIN";
+  const visibleNav = NAV.filter((n) => isAdmin || !n.adminOnly);
 
   return (
     <Sidebar collapsible="icon">
@@ -70,7 +78,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         {(["main", "admin"] as const).map((groupId) => {
-          const items = NAV.filter((n) => n.group === groupId);
+          const items = visibleNav.filter((n) => n.group === groupId);
           if (items.length === 0) return null;
           return (
             <SidebarGroup key={groupId}>
@@ -90,10 +98,14 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           render={<Link href={item.href} />}
                           isActive={active}
-                          tooltip={item.title}
+                          tooltip={!isAdmin && item.employeeTitle ? item.employeeTitle : item.title}
                         >
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span>
+                            {!isAdmin && item.employeeTitle
+                              ? item.employeeTitle
+                              : item.title}
+                          </span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );

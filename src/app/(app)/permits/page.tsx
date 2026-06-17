@@ -17,6 +17,8 @@ import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
 import { NewPermitDialog } from "@/components/new-permit-dialog";
 import { PermitReviewDialog } from "@/components/permit-review-dialog";
+import { requireUser } from "@/lib/authz";
+import { EmployeePermits } from "@/components/employee-views";
 import { ExportButton } from "@/components/export-button";
 import {
   DEPARTMENT_LABEL,
@@ -41,6 +43,14 @@ function startOfWeekCR() {
 }
 
 export default async function PermitsPage() {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") {
+    return <EmployeePermits userId={user.id} name={user.name ?? "Empleado"} />;
+  }
+  return <AdminPermits />;
+}
+
+async function AdminPermits() {
   const monthStart = startOfMonthCR();
   const weekStart = startOfWeekCR();
 

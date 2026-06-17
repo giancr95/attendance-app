@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/authz";
+import { EmployeePortal } from "@/components/employee-views";
 import { formatDateTime, startOfTodayCR } from "@/lib/format";
 import {
   Card,
@@ -59,6 +61,14 @@ async function loadDashboard() {
 }
 
 export default async function DashboardPage() {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") {
+    return <EmployeePortal userId={user.id} name={user.name ?? "Empleado"} />;
+  }
+  return <AdminDashboard />;
+}
+
+async function AdminDashboard() {
   const data = await loadDashboard();
 
   const stats = [

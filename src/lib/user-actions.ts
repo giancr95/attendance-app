@@ -138,6 +138,54 @@ export async function setUserCredentials(
   }
 }
 
+// Self-service: any logged-in user changes their OWN password after
+// confirming the current one. Does NOT require admin — but only ever
+// touches the caller's own row.
+export async function changeOwnPassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<ActionResult> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { ok: false, error: "No autorizado" };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return {
+        ok: false,
+        error: "La nueva contraseña debe tener al menos 6 caracteres.",
+      };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, passwordHash: true },
+    });
+    if (!user?.passwordHash) {
+      return {
+        ok: false,
+        error: "Tu cuenta no tiene contraseña configurada. Contacta a un administrador.",
+      };
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!matches) {
+      return { ok: false, error: "La contraseña actual es incorrecta." };
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(newPassword, 12) },
+    });
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
 // ───────────────────────────── profile ─────────────────────────────
 
 export type UpdateProfileInput = {

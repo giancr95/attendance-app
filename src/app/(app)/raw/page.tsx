@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import { ExportButton } from "@/components/export-button";
 import { RawDataFilters } from "@/components/raw-data-filters";
 import { PUNCH_KIND_LABEL, DEPARTMENT_LABEL } from "@/lib/labels";
@@ -58,6 +59,7 @@ export default async function RawDataPage({
 }: {
   searchParams: SearchParams;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
   const range = defaultRange();
   const startDate = parseCrDate(sp.start, range.start);

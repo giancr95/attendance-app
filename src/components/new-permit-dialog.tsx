@@ -42,9 +42,12 @@ type EmployeeOption = { id: string; name: string };
 
 type Props = {
   employees: EmployeeOption[];
+  // Self-service mode: hide the employee picker; the server action forces
+  // the request onto the logged-in (non-admin) user regardless of userId.
+  selfMode?: boolean;
 };
 
-export function NewPermitDialog({ employees }: Props) {
+export function NewPermitDialog({ employees, selfMode = false }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
 
@@ -113,21 +116,23 @@ export function NewPermitDialog({ employees }: Props) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="permit-employee">Empleado</Label>
-            <Select value={userId} onValueChange={pickString(setUserId)}>
-              <SelectTrigger id="permit-employee">
-                <SelectValue placeholder="Seleccionar empleado…" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!selfMode && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="permit-employee">Empleado</Label>
+              <Select value={userId} onValueChange={pickString(setUserId)}>
+                <SelectTrigger id="permit-employee">
+                  <SelectValue placeholder="Seleccionar empleado…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="permit-type">Tipo</Label>

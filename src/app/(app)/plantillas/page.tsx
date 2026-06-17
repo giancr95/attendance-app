@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import {
   Card,
   CardContent,
@@ -21,7 +22,8 @@ export const metadata = {
   title: "Plantillas · LCDP",
 };
 
-export default function PlantillasPage() {
+export default async function PlantillasPage() {
+  await requireAdmin();
   // Group by category, preserving the registration order within each
   const byCategory = new Map<string, typeof TEMPLATES>();
   for (const t of TEMPLATES) {

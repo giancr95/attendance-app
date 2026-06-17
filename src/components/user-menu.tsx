@@ -1,8 +1,12 @@
 "use client";
 
+import Link from "next/link";
+import { useTransition } from "react";
 import { LogOutIcon, UserIcon } from "lucide-react";
 
 import { logoutAction } from "@/lib/auth-actions";
+import { ROLE_LABEL } from "@/lib/labels";
+import type { Role } from "@/generated/prisma/client";
 import {
   Avatar,
   AvatarFallback,
@@ -20,7 +24,7 @@ import {
 type Props = {
   name: string;
   email?: string | null;
-  role: string;
+  role: Role;
 };
 
 function initialsFrom(name: string) {
@@ -29,6 +33,8 @@ function initialsFrom(name: string) {
 }
 
 export function UserMenu({ name, email, role }: Props) {
+  const [pending, startTransition] = useTransition();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -52,25 +58,31 @@ export function UserMenu({ name, email, role }: Props) {
             <span className="text-xs text-muted-foreground">{email}</span>
           ) : null}
           <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            {role}
+            {ROLE_LABEL[role] ?? role}
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>
+        <DropdownMenuItem render={<Link href="/perfil" />}>
           <UserIcon className="mr-2 size-4" />
           Mi perfil
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <form action={logoutAction} className="w-full">
-          <DropdownMenuItem
-            render={
-              <button type="submit" className="w-full text-left" />
-            }
-          >
-            <LogOutIcon className="mr-2 size-4" />
-            Cerrar sesión
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem
+          variant="destructive"
+          disabled={pending}
+          onClick={(event) => {
+            // Base UI closes the menu on click; run the logout server action
+            // in a transition so the redirect isn't lost when the popup
+            // unmounts. (A nested <form> submit inside a menu item is flaky.)
+            event.preventDefault();
+            startTransition(async () => {
+              await logoutAction();
+            });
+          }}
+        >
+          <LogOutIcon className="mr-2 size-4" />
+          {pending ? "Cerrando sesión…" : "Cerrar sesión"}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

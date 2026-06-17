@@ -35,9 +35,13 @@ type EmployeeOption = { id: string; name: string };
 
 type Props = {
   employees: EmployeeOption[];
+  // Self-service mode: the employee requests for themselves, so the
+  // employee picker is hidden. The server action ignores the submitted
+  // userId for non-admins and uses the session user anyway.
+  selfMode?: boolean;
 };
 
-export function NewVacationDialog({ employees }: Props) {
+export function NewVacationDialog({ employees, selfMode = false }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
 
@@ -103,21 +107,23 @@ export function NewVacationDialog({ employees }: Props) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="vac-employee">Empleado</Label>
-            <Select value={userId} onValueChange={pickString(setUserId)}>
-              <SelectTrigger id="vac-employee">
-                <SelectValue placeholder="Seleccionar empleado…" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!selfMode && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="vac-employee">Empleado</Label>
+              <Select value={userId} onValueChange={pickString(setUserId)}>
+                <SelectTrigger id="vac-employee">
+                  <SelectValue placeholder="Seleccionar empleado…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="vac-type">Tipo</Label>

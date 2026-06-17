@@ -30,6 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import { ReportFilters } from "@/components/report-filters";
 import { ExportButton } from "@/components/export-button";
 import { DEPARTMENT_LABEL } from "@/lib/labels";
@@ -78,6 +79,7 @@ export default async function PayrollPage({
 }: {
   searchParams: SearchParams;
 }) {
+  await requireAdmin();
   const sp = await searchParams;
 
   const startDate = parseCrDate(sp.start, startOfMonthCr());

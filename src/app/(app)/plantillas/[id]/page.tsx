@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 import { Button } from "@/components/ui/button";
 import { TEMPLATE_BY_ID } from "@/lib/templates";
 import { TemplateForm } from "@/components/template-form";
@@ -28,6 +29,7 @@ export default async function TemplateFormPage({
 }: {
   params: Params;
 }) {
+  await requireAdmin();
   const { id } = await params;
   const tpl = TEMPLATE_BY_ID[id];
   if (!tpl) notFound();

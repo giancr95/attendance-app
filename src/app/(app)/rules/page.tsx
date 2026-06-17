@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
+import { requireAdmin } from "@/lib/authz";
 
 export const metadata = {
   title: "Reglas · LCDP",
@@ -27,7 +28,8 @@ function fmtTime(t: { hour: number; minute: number }) {
     .padStart(2, "0")}`;
 }
 
-export default function RulesPage() {
+export default async function RulesPage() {
+  await requireAdmin();
   const days = [
     ["Lunes", ATTENDANCE_RULES.workdayWeekday.monday],
     ["Martes", ATTENDANCE_RULES.workdayWeekday.tuesday],
