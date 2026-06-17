@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import { LogOutIcon, UserIcon } from "lucide-react";
 
+import { logoutAction } from "@/lib/auth-actions";
 import { ROLE_LABEL } from "@/lib/labels";
 import type { Role } from "@/generated/prisma/client";
 import {
@@ -66,18 +66,23 @@ export function UserMenu({ name, email, role }: Props) {
           Mi perfil
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => {
-            // Client-side sign-out — posts to /api/auth/signout and then
-            // navigates to /login. Robust from a click handler (a server
-            // action that redirects does not navigate reliably here).
-            void signOut({ callbackUrl: "/login" });
-          }}
-        >
-          <LogOutIcon className="mr-2 size-4" />
-          Cerrar sesión
-        </DropdownMenuItem>
+        {/*
+          Logout via a server-action <form>. This is the canonical Auth.js v5
+          App Router sign-out: the action issues a RELATIVE redirect to /login
+          (no proxy host-mismatch like the next-auth/react client signOut), and
+          form submits reliably follow server-action redirects. We use a plain
+          styled submit button (not a Base UI Menu.Item) so the submit can't be
+          swallowed by the menu's click handling.
+        */}
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="group/dropdown-menu-item relative flex w-full cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-sm text-destructive outline-none transition-colors select-none hover:bg-destructive/10 focus-visible:bg-destructive/10 dark:hover:bg-destructive/20"
+          >
+            <LogOutIcon className="mr-2 size-4" />
+            Cerrar sesión
+          </button>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );
