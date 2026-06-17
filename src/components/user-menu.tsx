@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
+import { signOut } from "next-auth/react";
 import { LogOutIcon, UserIcon } from "lucide-react";
 
-import { logoutAction } from "@/lib/auth-actions";
 import { ROLE_LABEL } from "@/lib/labels";
 import type { Role } from "@/generated/prisma/client";
 import {
@@ -33,24 +32,24 @@ function initialsFrom(name: string) {
 }
 
 export function UserMenu({ name, email, role }: Props) {
-  const [pending, startTransition] = useTransition();
-
   return (
     <DropdownMenu>
+      {/* Content lives INSIDE the Button render element (same pattern as
+          employee-row-actions, which works with this Base UI version). */}
       <DropdownMenuTrigger
         render={
           <Button
             variant="ghost"
             className="h-9 gap-2 rounded-full px-1.5 pr-3"
             aria-label="Cuenta"
-          />
+          >
+            <Avatar className="size-7">
+              <AvatarFallback>{initialsFrom(name)}</AvatarFallback>
+            </Avatar>
+            <span className="hidden text-sm font-medium sm:inline">{name}</span>
+          </Button>
         }
-      >
-        <Avatar className="size-7">
-          <AvatarFallback>{initialsFrom(name)}</AvatarFallback>
-        </Avatar>
-        <span className="hidden text-sm font-medium sm:inline">{name}</span>
-      </DropdownMenuTrigger>
+      />
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="flex flex-col gap-0.5">
           <span className="text-sm font-medium">{name}</span>
@@ -69,19 +68,15 @@ export function UserMenu({ name, email, role }: Props) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
-          disabled={pending}
-          onClick={(event) => {
-            // Base UI closes the menu on click; run the logout server action
-            // in a transition so the redirect isn't lost when the popup
-            // unmounts. (A nested <form> submit inside a menu item is flaky.)
-            event.preventDefault();
-            startTransition(async () => {
-              await logoutAction();
-            });
+          onClick={() => {
+            // Client-side sign-out — posts to /api/auth/signout and then
+            // navigates to /login. Robust from a click handler (a server
+            // action that redirects does not navigate reliably here).
+            void signOut({ callbackUrl: "/login" });
           }}
         >
           <LogOutIcon className="mr-2 size-4" />
-          {pending ? "Cerrando sesión…" : "Cerrar sesión"}
+          Cerrar sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
